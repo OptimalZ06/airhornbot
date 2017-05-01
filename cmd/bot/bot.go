@@ -199,7 +199,7 @@ var RICKMORTY *SoundCollection = &SoundCollection{
 	},
 	Sounds: []*Sound{
 		creatSound("schmeckles", 50, 250),
-	}
+	},
 }
 
 var COLLECTIONS []*SoundCollection = []*SoundCollection{
