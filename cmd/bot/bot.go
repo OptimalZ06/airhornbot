@@ -198,7 +198,9 @@ var RICKMORTY *SoundCollection = &SoundCollection{
 		"!rickmorty",
 	},
 	Sounds: []*Sound{
-		createSound("schmeckles", 50, 250),
+		createSound("schmeckles", 1, 250),
+		createSound("cando", 1, 250),
+		createSound("myman", 1, 250),
 	},
 }
 
