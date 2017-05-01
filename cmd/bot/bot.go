@@ -191,6 +191,17 @@ var WOW *SoundCollection = &SoundCollection{
 	},
 }
 
+var RICKMORTY *SoundCollection = &SoundCollection{
+	Prefix: "rm",
+	Commands: []string{
+		"!rm",
+		"!rickmorty",
+	},
+	Sounds: []*Sound{
+		creatSound("schmeckles", 50, 250),
+	}
+}
+
 var COLLECTIONS []*SoundCollection = []*SoundCollection{
 	AIRHORN,
 	KHALED,
@@ -199,6 +210,7 @@ var COLLECTIONS []*SoundCollection = []*SoundCollection{
 	COW,
 	BIRTHDAY,
 	WOW,
+	RICKMORTY,
 }
 
 // Create a Sound struct
