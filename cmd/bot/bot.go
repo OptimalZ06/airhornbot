@@ -201,6 +201,7 @@ var RICKMORTY *SoundCollection = &SoundCollection{
 		createSound("schmeckles", 1, 250),
 		createSound("cando", 1, 250),
 		createSound("myman", 1, 250),
+		createSound("walkin", 1, 250),
 	},
 }
 
