@@ -205,6 +205,16 @@ var RICKMORTY *SoundCollection = &SoundCollection{
 	},
 }
 
+var ASTRO *SoundCollection = &SoundCollection{
+	Prefix: "astro",
+	Commands: []string{
+		"!astro",
+	},
+	Sounds: []*Sound{
+		createSound("style", 1, 250),
+	},
+}
+
 var COLLECTIONS []*SoundCollection = []*SoundCollection{
 	AIRHORN,
 	KHALED,
@@ -214,6 +224,7 @@ var COLLECTIONS []*SoundCollection = []*SoundCollection{
 	BIRTHDAY,
 	WOW,
 	RICKMORTY,
+	ASTRO,
 }
 
 // Create a Sound struct
