@@ -212,6 +212,11 @@ var ASTRO *SoundCollection = &SoundCollection{
 	},
 	Sounds: []*Sound{
 		createSound("style", 1, 250),
+		createSound("winston", 1, 250),
+		createSound("mercy", 1, 250),
+		createSound("pussy", 1, 250),
+		createSound("cunts", 1, 250),
+		createSound("neow", 1, 250),
 	},
 }
 
