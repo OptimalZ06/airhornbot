@@ -202,6 +202,13 @@ var RICKMORTY *SoundCollection = &SoundCollection{
 		createSound("cando", 1, 250),
 		createSound("myman", 1, 250),
 		createSound("walkin", 1, 250),
+		createSound("awe", 1, 250),
+		createSound("hide", 1, 250),
+		createSound("humanmusic", 1, 250),
+		createSound("poopypants", 1, 250),
+		createSound("showme", 1, 250),
+		createSound("sucks", 1, 250),
+		createSound("wub", 1, 250),
 	},
 }
 
