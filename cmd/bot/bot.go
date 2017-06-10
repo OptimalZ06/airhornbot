@@ -224,6 +224,7 @@ var ASTRO *SoundCollection = &SoundCollection{
 		createSound("pussy", 1, 250),
 		createSound("cunts", 1, 250),
 		createSound("neow", 1, 250),
+		createSound("no", 1, 250),
 	},
 }
 
