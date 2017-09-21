@@ -238,16 +238,6 @@ var BABY *SoundCollection = &SoundCollection{
 	},
 }
 
-var KENO *SoundCollection = &SoundCollection{
-	Prefix: "keno",
-	Commands: []string{
-		"!keno",
-	},
-	Sounds: []*Sound{
-		createSound("butt", 1, 250),
-	},
-}
-
 var COLLECTIONS []*SoundCollection = []*SoundCollection{
 	AIRHORN,
 	KHALED,
@@ -259,7 +249,6 @@ var COLLECTIONS []*SoundCollection = []*SoundCollection{
 	RICKMORTY,
 	ASTRO,
 	BABY,
-	KENO,
 }
 
 // Create a Sound struct
