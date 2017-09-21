@@ -244,7 +244,7 @@ var KENO *SoundCollection = &SoundCollection{
 		"!keno",
 	},
 	Sounds: []*Sound{
-		createSound("imp", 1, 250),
+		createSound("butt", 1, 250),
 	},
 }
 
