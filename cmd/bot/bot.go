@@ -510,19 +510,6 @@ func onReady(s *discordgo.Session, event *discordgo.Ready) {
 	s.UpdateStatus(0, "airhornbot.com")
 }
 
-func onGuildCreate(s *discordgo.Session, event *discordgo.GuildCreate) {
-	if event.Guild.Unavailable {
-		return
-	}
-
-	for _, channel := range event.Guild.Channels {
-		if channel.ID == event.Guild.ID {
-			s.ChannelMessageSend(channel.ID, "**AIRHORN BOT READY FOR HORNING. TYPE `!AIRHORN` WHILE IN A VOICE CHANNEL TO ACTIVATE**")
-			return
-		}
-	}
-}
-
 func scontains(key string, options ...string) bool {
 	for _, item := range options {
 		if item == key {
@@ -776,7 +763,6 @@ func main() {
 	}
 
 	discord.AddHandler(onReady)
-	discord.AddHandler(onGuildCreate)
 	discord.AddHandler(onMessageCreate)
 
 	err = discord.Open()
