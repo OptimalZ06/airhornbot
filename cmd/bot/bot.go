@@ -600,28 +600,6 @@ func utilGetMentioned(s *discordgo.Session, m *discordgo.MessageCreate) *discord
 	return nil
 }
 
-func airhornBomb(cid string, guild *discordgo.Guild, user *discordgo.User, cs string) {
-	count, _ := strconv.Atoi(cs)
-	discord.ChannelMessageSend(cid, ":ok_hand:"+strings.Repeat(":trumpet:", count))
-
-	// Cap it at something
-	if count > 100 {
-		return
-	}
-
-	play := createPlay(user, guild, AIRHORN, nil)
-	vc, err := discord.ChannelVoiceJoin(play.GuildID, play.ChannelID, true, true)
-	if err != nil {
-		return
-	}
-
-	for i := 0; i < count; i++ {
-		AIRHORN.Random().Play(vc)
-	}
-
-	vc.Disconnect()
-}
-
 // Handles bot operator messages, should be refactored (lmao)
 func handleBotControlMessages(s *discordgo.Session, m *discordgo.MessageCreate, parts []string, g *discordgo.Guild) {
 	if scontains(parts[1], "status") {
@@ -634,8 +612,6 @@ func handleBotControlMessages(s *discordgo.Session, m *discordgo.MessageCreate, 
 		} else {
 			displayServerStats(m.ChannelID, g.ID)
 		}
-	} else if scontains(parts[1], "bomb") && len(parts) >= 4 {
-		airhornBomb(m.ChannelID, g, utilGetMentioned(s, m), parts[3])
 	} else if scontains(parts[1], "aps") {
 		s.ChannelMessageSend(m.ChannelID, ":ok_hand: give me a sec m8")
 		go calculateAirhornsPerSecond(m.ChannelID)
