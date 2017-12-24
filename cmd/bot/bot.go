@@ -191,6 +191,53 @@ var WOW *SoundCollection = &SoundCollection{
 	},
 }
 
+var RICKMORTY *SoundCollection = &SoundCollection{
+	Prefix: "rm",
+	Commands: []string{
+		"!rm",
+		"!rickmorty",
+	},
+	Sounds: []*Sound{
+		createSound("schmeckles", 1, 250),
+		createSound("cando", 1, 250),
+		createSound("myman", 1, 250),
+		createSound("walkin", 1, 250),
+		createSound("awe", 1, 250),
+		createSound("hide", 1, 250),
+		createSound("humanmusic", 1, 250),
+		createSound("poopypants", 1, 250),
+		createSound("showme", 1, 250),
+		createSound("sucks", 1, 250),
+		createSound("wub", 1, 250),
+	},
+}
+
+var ASTRO *SoundCollection = &SoundCollection{
+	Prefix: "astro",
+	Commands: []string{
+		"!astro",
+	},
+	Sounds: []*Sound{
+		createSound("style", 1, 250),
+		createSound("winston", 1, 250),
+		createSound("mercy", 1, 250),
+		createSound("pussy", 1, 250),
+		createSound("cunts", 1, 250),
+		createSound("neow", 1, 250),
+		createSound("nono", 1, 250),
+	},
+}
+
+var BABY *SoundCollection = &SoundCollection{
+	Prefix: "baby",
+	Commands: []string{
+		"!baby",
+	},
+	Sounds: []*Sound{
+		createSound("iwon", 1, 250),
+	},
+}
+
 var COLLECTIONS []*SoundCollection = []*SoundCollection{
 	AIRHORN,
 	KHALED,
@@ -199,6 +246,9 @@ var COLLECTIONS []*SoundCollection = []*SoundCollection{
 	COW,
 	BIRTHDAY,
 	WOW,
+	RICKMORTY,
+	ASTRO,
+	BABY,
 }
 
 // Create a Sound struct
