@@ -550,7 +550,6 @@ func onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 func main() {
 	var (
 		Token      = flag.String("t", "", "Discord Authentication Token")
-		Redis      = flag.String("r", "", "Redis Connection String")
 		Shard      = flag.String("s", "", "Shard ID")
 		ShardCount = flag.String("c", "", "Number of shards")
 		Owner      = flag.String("o", "", "Owner ID")
