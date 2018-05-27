@@ -457,6 +457,7 @@ func playSound(play *Play, vc *discordgo.VoiceConnection) (err error) {
 	time.Sleep(time.Millisecond * time.Duration(play.Sound.PartDelay))
 	delete(queues, play.GuildID)
 	vc.Disconnect()
+	time.Sleep(time.Second *  1)
 	return nil
 }
 
