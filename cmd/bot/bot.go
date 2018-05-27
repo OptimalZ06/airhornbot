@@ -17,7 +17,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/bwmarrin/discordgo"
-	"github.com/dustin/go-humanize"
 )
 
 var (
@@ -478,31 +477,6 @@ func scontains(key string, options ...string) bool {
 	return false
 }
 
-func displayBotStats(cid string) {
-	stats := runtime.MemStats{}
-	runtime.ReadMemStats(&stats)
-
-	users := 0
-	for _, guild := range discord.State.Ready.Guilds {
-		users += len(guild.Members)
-	}
-
-	w := &tabwriter.Writer{}
-	buf := &bytes.Buffer{}
-
-	w.Init(buf, 0, 4, 0, ' ', 0)
-	fmt.Fprintf(w, "```\n")
-	fmt.Fprintf(w, "Discordgo: \t%s\n", discordgo.VERSION)
-	fmt.Fprintf(w, "Go: \t%s\n", runtime.Version())
-	fmt.Fprintf(w, "Memory: \t%s / %s (%s total allocated)\n", humanize.Bytes(stats.Alloc), humanize.Bytes(stats.Sys), humanize.Bytes(stats.TotalAlloc))
-	fmt.Fprintf(w, "Tasks: \t%d\n", runtime.NumGoroutine())
-	fmt.Fprintf(w, "Servers: \t%d\n", len(discord.State.Ready.Guilds))
-	fmt.Fprintf(w, "Users: \t%d\n", users)
-	fmt.Fprintf(w, "```\n")
-	w.Flush()
-	discord.ChannelMessageSend(cid, buf.String())
-}
-
 func utilGetMentioned(s *discordgo.Session, m *discordgo.MessageCreate) *discordgo.User {
 	for _, mention := range m.Mentions {
 		if mention.ID != s.State.Ready.User.ID {
@@ -549,9 +523,6 @@ func onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			}
 		}
 
-		if mentioned {
-			handleBotControlMessages(s, m, parts, guild)
-		}
 		return
 	}
 
