@@ -439,9 +439,6 @@ func playSound(play *Play, vc *discordgo.VoiceConnection) (err error) {
 		time.Sleep(time.Millisecond * 125)
 	}
 
-	// Track stats for this play in redis
-	go trackSoundStats(play)
-
 	// Sleep for a specified amount of time before playing the sound
 	time.Sleep(time.Millisecond * 32)
 
@@ -513,24 +510,6 @@ func utilGetMentioned(s *discordgo.Session, m *discordgo.MessageCreate) *discord
 		}
 	}
 	return nil
-}
-
-// Handles bot operator messages, should be refactored (lmao)
-func handleBotControlMessages(s *discordgo.Session, m *discordgo.MessageCreate, parts []string, g *discordgo.Guild) {
-	if scontains(parts[1], "status") {
-		displayBotStats(m.ChannelID)
-	} else if scontains(parts[1], "stats") {
-		if len(m.Mentions) >= 2 {
-			displayUserStats(m.ChannelID, utilGetMentioned(s, m).ID)
-		} else if len(parts) >= 3 {
-			displayUserStats(m.ChannelID, parts[2])
-		} else {
-			displayServerStats(m.ChannelID, g.ID)
-		}
-	} else if scontains(parts[1], "aps") {
-		s.ChannelMessageSend(m.ChannelID, ":ok_hand: give me a sec m8")
-		go calculateAirhornsPerSecond(m.ChannelID)
-	}
 }
 
 func onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
