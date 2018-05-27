@@ -418,6 +418,7 @@ func playSound(play *Play, vc *discordgo.VoiceConnection) (err error) {
 	}).Info("Playing sound")
 
 	if vc == nil {
+		time.Sleep(time.Second *  2)
 		vc, err = discord.ChannelVoiceJoin(play.GuildID, play.ChannelID, false, false)
 		// vc.Receive = false
 		if err != nil {
@@ -457,7 +458,6 @@ func playSound(play *Play, vc *discordgo.VoiceConnection) (err error) {
 	time.Sleep(time.Millisecond * time.Duration(play.Sound.PartDelay))
 	delete(queues, play.GuildID)
 	vc.Disconnect()
-	time.Sleep(time.Second *  1)
 	return nil
 }
 
