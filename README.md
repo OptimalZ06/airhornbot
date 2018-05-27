@@ -1,38 +1,36 @@
-# The only reason this is working is because of [arosolino](https://github.com/arosolino).
+### The only reason this is working is because of [arosolino](https://github.com/arosolino).
 Thanks bud. You da real mvp.
 
-# Airhorn Bot
-Airhorn bot utilizes the [discordgo](https://github.com/bwmarrin/discordgo) library, a free and open source library.
+# Airhorn Bot Fork
+The original airhorn bot got abandoned by it's creator but we can't let that happen. This fork is a slimmed down version. I removed extras like stats and the webserver.  It still uses the [discordgo](https://github.com/bwmarrin/discordgo) library.
 
 ## Usage
-Airhorn Bot is now only a bot client that handles the playing of loyal airhorns. Once added to your server, airhorn bot can be summoned by running `!airhorn`.
+Use `!airhorn` command to play classic airhorns.
 
+## Let's get this baby up and running
 
-### Running the Bot
-
-**Prerequisites:**
+**Requirements:**
 Go 1.4 or higher
 
-**First install the bot:** Like on a server or maybe a pi if you're cool enough.
+**Add bot to server:**
+`https://discordapp.com/api/oauth2/authorize?client_id=<YOUR_CLIENT_ID>&scope=bot&permissions=1`
+
+**Install the bot:**
+Like on a server or maybe a pi if you're cool enough. Grab it and compile that sucker.
 ```
 go get github.com/calebjessie/airhornbot/cmd/bot
 go install github.com/calebjessie/airhornbot/cmd/bot
 ```
- **Then run the following command:**
-
+ **Start 'er up:**
+Go to the root of the bot folder, i.e., `../github.com/calebjessie/airhornbot/`
+Before you do this make sure GOPATH environment variable set correctly.
 ```
-bot -r "localhost:6379" -t "MY_BOT_ACCOUNT_TOKEN" -o OWNER_ID
+/.$GOPATH/bin/bot -t "MY_BOT_ACCOUNT_TOKEN" -o OWNER_ID
 ```
 
 ## Thanks to the original devs
 Thanks to the awesome (one might describe them as smart... loyal... appreciative...) [iopred](https://github.com/iopred) and [bwmarrin](https://github.com/bwmarrin/discordgo) for helping code review the initial release.
 
-
-# If you have a broken Airhornbot
-Here's what I did to fix it for the new API updates.
-
-1. Make sure this is import is all lowercase. Broke some stuff on my ubuntu server. If you go [here](github.com/sirupsen/logrus) you'll see why.
-
-```
-log "github.com/sirupsen/logrus"
-```
+## That yung todo
+1. Fix disconnect/reconnect bug. Bot gets stuck in voice channel.
+2. Parse commands and search for sound in audio folder. Easier to add new sounds this way.
