@@ -417,8 +417,9 @@ func playSound(play *Play, vc *discordgo.VoiceConnection) (err error) {
 		"play": play,
 	}).Info("Playing sound")
 
+	time.Sleep(time.Second *  2)
+
 	if vc == nil {
-		time.Sleep(time.Second *  2)
 		vc, err = discord.ChannelVoiceJoin(play.GuildID, play.ChannelID, false, false)
 		// vc.Receive = false
 		if err != nil {
