@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/binary"
 	"flag"
 	"fmt"
@@ -9,10 +8,8 @@ import (
 	"math/rand"
 	"os"
 	"os/signal"
-	"runtime"
 	"strconv"
 	"strings"
-	"text/tabwriter"
 	"time"
 
 	log "github.com/sirupsen/logrus"
