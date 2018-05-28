@@ -340,7 +340,7 @@ func main() {
 	}
 
 	if *Prefix != "" {
-		Prefix = append(Prefix, *Prefix)
+		Prefix += *Prefix
 		fmt.Println("Sexy Prefix: ", Prefix)
 	}
 
