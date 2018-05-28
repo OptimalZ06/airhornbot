@@ -5,9 +5,11 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"math/rand"
 	"os"
 	"os/signal"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -49,7 +51,6 @@ type SoundCollection struct {
 	Prefix    string
 	Commands  []string
 	Sounds    []*Sound
-	ChainWith *SoundCollection
 
 	soundRange int
 }
@@ -68,180 +69,7 @@ type Sound struct {
 	buffer [][]byte
 }
 
-// Array of all the sounds we have
-var AIRHORN *SoundCollection = &SoundCollection{
-	Prefix: "airhorn",
-	Commands: []string{
-		"!airhorn",
-	},
-	Sounds: []*Sound{
-		createSound("default", 1000, 250),
-		createSound("reverb", 800, 250),
-		createSound("spam", 800, 0),
-		createSound("tripletap", 800, 250),
-		createSound("fourtap", 800, 250),
-		createSound("distant", 500, 250),
-		createSound("echo", 500, 250),
-		createSound("clownfull", 250, 250),
-		createSound("clownshort", 250, 250),
-		createSound("clownspam", 250, 0),
-		createSound("highfartlong", 200, 250),
-		createSound("highfartshort", 200, 250),
-		createSound("midshort", 100, 250),
-		createSound("truck", 10, 250),
-	},
-}
-
-var KHALED *SoundCollection = &SoundCollection{
-	Prefix:    "another",
-	ChainWith: AIRHORN,
-	Commands: []string{
-		"!anotha",
-		"!anothaone",
-	},
-	Sounds: []*Sound{
-		createSound("one", 1, 250),
-		createSound("one_classic", 1, 250),
-		createSound("one_echo", 1, 250),
-	},
-}
-
-var CENA *SoundCollection = &SoundCollection{
-	Prefix: "jc",
-	Commands: []string{
-		"!johncena",
-		"!cena",
-	},
-	Sounds: []*Sound{
-		createSound("airhorn", 1, 250),
-		createSound("echo", 1, 250),
-		createSound("full", 1, 250),
-		createSound("jc", 1, 250),
-		createSound("nameis", 1, 250),
-		createSound("spam", 1, 250),
-	},
-}
-
-var ETHAN *SoundCollection = &SoundCollection{
-	Prefix: "ethan",
-	Commands: []string{
-		"!ethan",
-		"!eb",
-		"!ethanbradberry",
-		"!h3h3",
-	},
-	Sounds: []*Sound{
-		createSound("areyou_classic", 100, 250),
-		createSound("areyou_condensed", 100, 250),
-		createSound("areyou_crazy", 100, 250),
-		createSound("areyou_ethan", 100, 250),
-		createSound("classic", 100, 250),
-		createSound("echo", 100, 250),
-		createSound("high", 100, 250),
-		createSound("slowandlow", 100, 250),
-		createSound("cuts", 30, 250),
-		createSound("beat", 30, 250),
-		createSound("sodiepop", 1, 250),
-	},
-}
-
-var COW *SoundCollection = &SoundCollection{
-	Prefix: "cow",
-	Commands: []string{
-		"!stan",
-		"!stanislav",
-	},
-	Sounds: []*Sound{
-		createSound("herd", 10, 250),
-		createSound("moo", 10, 250),
-		createSound("x3", 1, 250),
-	},
-}
-
-var BIRTHDAY *SoundCollection = &SoundCollection{
-	Prefix: "birthday",
-	Commands: []string{
-		"!birthday",
-		"!bday",
-	},
-	Sounds: []*Sound{
-		createSound("horn", 50, 250),
-		createSound("horn3", 30, 250),
-		createSound("sadhorn", 25, 250),
-		createSound("weakhorn", 25, 250),
-	},
-}
-
-var WOW *SoundCollection = &SoundCollection{
-	Prefix: "wow",
-	Commands: []string{
-		"!wowthatscool",
-		"!wtc",
-	},
-	Sounds: []*Sound{
-		createSound("thatscool", 50, 250),
-	},
-}
-
-var RICKMORTY *SoundCollection = &SoundCollection{
-	Prefix: "rm",
-	Commands: []string{
-		"!rm",
-		"!rickmorty",
-	},
-	Sounds: []*Sound{
-		createSound("schmeckles", 1, 250),
-		createSound("cando", 1, 250),
-		createSound("myman", 1, 250),
-		createSound("walkin", 1, 250),
-		createSound("awe", 1, 250),
-		createSound("hide", 1, 250),
-		createSound("humanmusic", 1, 250),
-		createSound("poopypants", 1, 250),
-		createSound("showme", 1, 250),
-		createSound("sucks", 1, 250),
-		createSound("wub", 1, 250),
-	},
-}
-
-var ASTRO *SoundCollection = &SoundCollection{
-	Prefix: "astro",
-	Commands: []string{
-		"!astro",
-	},
-	Sounds: []*Sound{
-		createSound("style", 1, 250),
-		createSound("winston", 1, 250),
-		createSound("mercy", 1, 250),
-		createSound("pussy", 1, 250),
-		createSound("cunts", 1, 250),
-		createSound("neow", 1, 250),
-		createSound("nono", 1, 250),
-	},
-}
-
-var BABY *SoundCollection = &SoundCollection{
-	Prefix: "baby",
-	Commands: []string{
-		"!baby",
-	},
-	Sounds: []*Sound{
-		createSound("iwon", 1, 250),
-	},
-}
-
-var COLLECTIONS []*SoundCollection = []*SoundCollection{
-	AIRHORN,
-	KHALED,
-	CENA,
-	ETHAN,
-	COW,
-	BIRTHDAY,
-	WOW,
-	RICKMORTY,
-	ASTRO,
-	BABY,
-}
+var COLLECTIONS []*SoundCollection = []*SoundCollection{}
 
 // Create a Sound struct
 func createSound(Name string, Weight int, PartDelay int) *Sound {
@@ -376,17 +204,6 @@ func createPlay(user *discordgo.User, guild *discordgo.Guild, coll *SoundCollect
 		play.Forced = false
 	}
 
-	// If the collection is a chained one, set the next sound
-	if coll.ChainWith != nil {
-		play.Next = &Play{
-			GuildID:   play.GuildID,
-			ChannelID: play.ChannelID,
-			UserID:    play.UserID,
-			Sound:     coll.ChainWith.Random(),
-			Forced:    play.Forced,
-		}
-	}
-
 	return play
 }
 
@@ -517,6 +334,10 @@ func onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		for _, mention := range m.Mentions {
 			mentioned = (mention.ID == s.State.Ready.User.ID)
 			if mentioned {
+				log.Info(parts[0])
+				if(parts[1] == "reload") {
+					load()
+				}
 				break
 			}
 		}
@@ -562,11 +383,9 @@ func main() {
 		OWNER = *Owner
 	}
 
-	// Preload all the sounds
-	log.Info("Preloading sounds...")
-	for _, coll := range COLLECTIONS {
-		coll.Load()
-	}
+
+	// Load all sounds and build collections
+	load()
 
 	// Create a discord session
 	log.Info("Starting discord session...")
@@ -607,6 +426,60 @@ func main() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, os.Kill)
 	<-c
+}
+
+func load() {
+	log.Info("Loading files and building collections")
+
+	// Reset the collections
+	COLLECTIONS = []*SoundCollection{}
+
+	// Read all files from the audio directory
+	files, err := ioutil.ReadDir("audio")
+  if err != nil {
+  	log.Fatal(err)
+  }
+
+	// Loop through each file and store into a collections map
+	colls := make(map[string][]string)
+  for _, file := range files {
+
+		// Only match files according to the regex below
+    rp := regexp.MustCompile("^([a-z]+)_([a-z]+)\\.dca$")
+    m := rp.FindAllStringSubmatch(file.Name(), -1)
+    if m != nil {
+
+			// Add to the groups collections
+			coll := m[0][1]
+			sound := m[0][2]
+			colls[coll] = append(colls[coll], sound)
+    }
+  }
+
+	// Loop through the groups collections we created and build a sound collection
+	for coll, sounds := range colls {
+
+		// Create an array of sounds
+		wee := []*Sound{}
+		for _, sound := range sounds {
+			wee = append(wee, createSound(sound, 1, 250))
+		}
+
+		// Append the sound collection to the collections
+		COLLECTIONS = append(COLLECTIONS, &SoundCollection{
+			Prefix: coll,
+			Commands: []string{
+				"!" + coll,
+			},
+			Sounds: wee,
+		})
+	}
+
+	// Preload all the sounds
+	log.Info("Preloading sounds...")
+	for _, coll := range COLLECTIONS {
+		coll.Load()
+	}
 }
 
 // This function will be called (due to AddHandler above) every time a new
