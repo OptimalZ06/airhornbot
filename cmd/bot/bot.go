@@ -252,7 +252,7 @@ func onReady(s *discordgo.Session, event *discordgo.Ready) {
 }
 
 func onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if !strings.HasPrefix(m.Content, PREFIX) && !len(m.Mentions) {
+	if !strings.HasPrefix(m.Content, PREFIX) && len(m.Mentions) < 1 {
 	    return
 	}
 
