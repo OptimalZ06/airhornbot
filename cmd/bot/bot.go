@@ -330,12 +330,17 @@ func main() {
 		Shard      = flag.String("s", "", "Shard ID")
 		ShardCount = flag.String("c", "", "Number of shards")
 		Owner      = flag.String("o", "", "Owner ID")
+		Prefix		 = flag.String("p", "", "Prefix for commands")
 		err        error
 	)
 	flag.Parse()
 
 	if *Owner != "" {
 		OWNER = *Owner
+	}
+
+	if *Prefix != "" {
+		Prefix = "!" + *Prefix
 	}
 
 	// Load all sounds and build collections
