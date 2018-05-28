@@ -26,6 +26,12 @@ var (
 	// Map of Guild id's to *Play channels, used for queuing and rate-limiting guilds
 	queues map[string]chan *Play = make(map[string]chan *Play)
 
+	// Time delays
+	DELAY_AFTER_SOUND = time.Millisecond * 250
+	DELAY_BEFORE_SOUND = time.Millisecond * 32
+	DELAY_CHANGE_CHANNEL = time.Millisecond * 250
+	DELAY_JOIN_CHANNEL = time.Second * 2
+
 	// Sound encoding settings
 	BITRATE        = 128
 	MAX_QUEUE_SIZE = 6
@@ -56,9 +62,6 @@ type SoundCollection struct {
 // Sound represents a sound clip
 type Sound struct {
 	Name string
-
-	// Delay (in milliseconds) for the bot to wait before sending the disconnect request
-	PartDelay int
 
 	// Buffer to store encoded PCM packets
 	buffer [][]byte
@@ -200,7 +203,7 @@ func playSound(play *Play, vc *discordgo.VoiceConnection) (err error) {
 	}).Info("Playing sound")
 
 	if vc == nil {
-		time.Sleep(time.Second *  2)
+		time.Sleep(DELAY_JOIN_CHANNEL)
 		vc, err = discord.ChannelVoiceJoin(play.GuildID, play.ChannelID, false, false)
 		// vc.Receive = false
 		if err != nil {
@@ -215,11 +218,11 @@ func playSound(play *Play, vc *discordgo.VoiceConnection) (err error) {
 	// If we need to change channels, do that now
 	if vc.ChannelID != play.ChannelID {
 		vc.ChangeChannel(play.ChannelID, false, false)
-		time.Sleep(time.Millisecond * 125)
+		time.Sleep(DELAY_CHANGE_CHANNEL)
 	}
 
 	// Sleep for a specified amount of time before playing the sound
-	time.Sleep(time.Millisecond * 32)
+	time.Sleep(DELAY_BEFORE_SOUND)
 
 	// Play the sound
 	play.Sound.Play(vc)
@@ -237,7 +240,7 @@ func playSound(play *Play, vc *discordgo.VoiceConnection) (err error) {
 	}
 
 	// If the queue is empty, delete it
-	time.Sleep(time.Millisecond * time.Duration(play.Sound.PartDelay))
+	time.Sleep(DELAY_AFTER_SOUND)
 	delete(queues, play.GuildID)
 	vc.Disconnect()
 	return nil
@@ -413,7 +416,6 @@ func load() {
 		for _, sound := range sounds {
 			wee = append(wee, &Sound{
 				Name:      sound,
-				PartDelay: 250,
 				buffer:    make([][]byte, 0),
 			})
 		}
