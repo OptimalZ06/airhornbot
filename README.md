@@ -35,4 +35,3 @@ Thanks to the awesome (one might describe them as smart... loyal... appreciative
 
 ## That yung todo
 1. Fix disconnect/reconnect bug. Bot gets stuck in voice channel.
-2. Parse commands and search for sound in audio folder. Easier to add new sounds this way.

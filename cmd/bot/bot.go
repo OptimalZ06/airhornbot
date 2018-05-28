@@ -30,6 +30,9 @@ var (
 	BITRATE        = 128
 	MAX_QUEUE_SIZE = 6
 
+	// Commands prefix
+	PREFIX = "!"
+
 	// Owner
 	OWNER string
 )
@@ -43,25 +46,16 @@ type Play struct {
 
 	// The next play to occur after this, only used for chaining sounds like anotha
 	Next *Play
-
-	// If true, this was a forced play using a specific airhorn sound name
-	Forced bool
 }
 
 type SoundCollection struct {
-	Prefix    string
-	Commands  []string
+	Name    string
 	Sounds    []*Sound
-
-	soundRange int
 }
 
 // Sound represents a sound clip
 type Sound struct {
 	Name string
-
-	// Weight adjust how likely it is this song will play, higher = more likely
-	Weight int
 
 	// Delay (in milliseconds) for the bot to wait before sending the disconnect request
 	PartDelay int
@@ -72,37 +66,10 @@ type Sound struct {
 
 var COLLECTIONS []*SoundCollection = []*SoundCollection{}
 
-// Create a Sound struct
-func createSound(Name string, Weight int, PartDelay int) *Sound {
-	return &Sound{
-		Name:      Name,
-		Weight:    Weight,
-		PartDelay: PartDelay,
-		buffer:    make([][]byte, 0),
-	}
-}
-
 func (sc *SoundCollection) Load() {
 	for _, sound := range sc.Sounds {
-		sc.soundRange += sound.Weight
 		sound.Load(sc)
 	}
-}
-
-func (s *SoundCollection) Random() *Sound {
-	var (
-		i      int
-		number int = randomRange(0, s.soundRange)
-	)
-
-	for _, sound := range s.Sounds {
-		i += sound.Weight
-
-		if number < i {
-			return sound
-		}
-	}
-	return nil
 }
 
 // Load attempts to load an encoded sound file from disk
@@ -111,7 +78,7 @@ func (s *SoundCollection) Random() *Sound {
 // https://github.com/nstafie/dca-rs
 // eg: dca-rs --raw -i <input wav file> > <output file>
 func (s *Sound) Load(c *SoundCollection) error {
-	path := fmt.Sprintf("audio/%v_%v.dca", c.Prefix, s.Name)
+	path := fmt.Sprintf("audio/%v_%v.dca", c.Name, s.Name)
 
 	file, err := os.Open(path)
 
@@ -180,6 +147,7 @@ func randomRange(min, max int) int {
 
 // Prepares a play
 func createPlay(user *discordgo.User, guild *discordgo.Guild, coll *SoundCollection, sound *Sound) *Play {
+
 	// Grab the users voice channel
 	channel := getCurrentVoiceChannel(user, guild)
 	if channel == nil {
@@ -190,22 +158,18 @@ func createPlay(user *discordgo.User, guild *discordgo.Guild, coll *SoundCollect
 		return nil
 	}
 
+	// If we didn't get passed a manual sound, generate a random one
+	if sound == nil {
+		sound = coll.Sounds[randomRange(0, len(coll.Sounds))]
+	}
+
 	// Create the play
-	play := &Play{
+	return &Play{
 		GuildID:   guild.ID,
 		ChannelID: channel.ID,
 		UserID:    user.ID,
 		Sound:     sound,
-		Forced:    true,
 	}
-
-	// If we didn't get passed a manual sound, generate a random one
-	if play.Sound == nil {
-		play.Sound = coll.Random()
-		play.Forced = false
-	}
-
-	return play
 }
 
 // Prepares and enqueues a play into the ratelimit/buffer guild queue
@@ -284,28 +248,12 @@ func onReady(s *discordgo.Session, event *discordgo.Ready) {
 	s.UpdateStatus(0, "airhornbot.com")
 }
 
-func scontains(key string, options ...string) bool {
-	for _, item := range options {
-		if item == key {
-			return true
-		}
-	}
-	return false
-}
-
-func utilGetMentioned(s *discordgo.Session, m *discordgo.MessageCreate) *discordgo.User {
-	for _, mention := range m.Mentions {
-		if mention.ID != s.State.Ready.User.ID {
-			return mention
-		}
-	}
-	return nil
-}
-
 func onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if len(m.Content) <= 0 || (m.Content[0] != '!' && len(m.Mentions) < 1) {
 		return
 	}
+
+	log.Info(m)
 
 	msg := strings.Replace(m.ContentWithMentionsReplaced(), s.State.Ready.User.Username, "username", 1)
 	parts := strings.Split(strings.ToLower(msg), " ")
@@ -351,7 +299,7 @@ func onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	// Find the collection for the command we got
 	for _, coll := range COLLECTIONS {
-		if scontains(parts[0], coll.Commands...) {
+		if parts[0] == "!" + coll.Name {
 
 			// If they passed a specific sound effect, find and select that (otherwise play nothing)
 			var sound *Sound
@@ -387,7 +335,6 @@ func main() {
 		OWNER = *Owner
 	}
 
-
 	// Load all sounds and build collections
 	load()
 
@@ -404,15 +351,13 @@ func main() {
 	// Set sharding info
 	discord.ShardID, _ = strconv.Atoi(*Shard)
 	discord.ShardCount, _ = strconv.Atoi(*ShardCount)
-
 	if discord.ShardCount <= 0 {
 		discord.ShardCount = 1
 	}
 
+	// Register call backs
 	discord.AddHandler(onReady)
 	discord.AddHandler(onMessageCreate)
-
-	// Register guildCreate as a callback for the guildCreate events.
 	discord.AddHandler(guildCreate)
 
 	err = discord.Open()
@@ -466,15 +411,16 @@ func load() {
 		// Create an array of sounds
 		wee := []*Sound{}
 		for _, sound := range sounds {
-			wee = append(wee, createSound(sound, 1, 250))
+			wee = append(wee, &Sound{
+				Name:      sound,
+				PartDelay: 250,
+				buffer:    make([][]byte, 0),
+			})
 		}
 
 		// Append the sound collection to the collections
 		COLLECTIONS = append(COLLECTIONS, &SoundCollection{
-			Prefix: coll,
-			Commands: []string{
-				"!" + coll,
-			},
+			Name: coll,
 			Sounds: wee,
 		})
 	}
@@ -486,6 +432,7 @@ func load() {
 	}
 }
 
+// Print out all the commands
 func help(m *discordgo.MessageCreate) {
 
 	// Create a buffer
@@ -494,8 +441,8 @@ func help(m *discordgo.MessageCreate) {
 	// Print out collections and sounds
 	buffer.WriteString("```md\n")
 	for _, coll := range COLLECTIONS {
-		buffer.WriteString(coll.Prefix + "\n")
-		buffer.WriteString(strings.Repeat("=", len(coll.Prefix)) + "\n")
+		command := PREFIX + coll.Name
+		buffer.WriteString(command + "\n" + strings.Repeat("=", len(command)) + "\n")
 		for _, s := range coll.Sounds {
 			buffer.WriteString(s.Name + "\n")
 		}
