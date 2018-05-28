@@ -436,25 +436,25 @@ func load() {
 
 	// Read all files from the audio directory
 	files, err := ioutil.ReadDir("audio")
-  if err != nil {
-  	log.Fatal(err)
-  }
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Loop through each file and store into a collections map
 	colls := make(map[string][]string)
-  for _, file := range files {
+	for _, file := range files {
 
 		// Only match files according to the regex below
-    rp := regexp.MustCompile("^([a-z]+)_([a-z]+)\\.dca$")
-    m := rp.FindAllStringSubmatch(file.Name(), -1)
-    if m != nil {
+		rp := regexp.MustCompile("^([a-z]+)_([a-z]+)\\.dca$")
+		m := rp.FindAllStringSubmatch(file.Name(), -1)
+		if m != nil {
 
 			// Add to the groups collections
 			coll := m[0][1]
 			sound := m[0][2]
 			colls[coll] = append(colls[coll], sound)
-    }
-  }
+		}
+	}
 
 	// Loop through the groups collections we created and build a sound collection
 	for coll, sounds := range colls {
