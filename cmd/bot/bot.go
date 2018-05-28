@@ -252,11 +252,9 @@ func onReady(s *discordgo.Session, event *discordgo.Ready) {
 }
 
 func onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if len(m.Content) <= 0 || (m.Content[0] != '!' && len(m.Mentions) < 1) {
-		return
+	if !strings.HasPrefix(m.Content, PREFIX) && len(m.Mentions) {
+	    return
 	}
-
-	log.Info(m)
 
 	msg := strings.Replace(m.ContentWithMentionsReplaced(), s.State.Ready.User.Username, "username", 1)
 	parts := strings.Split(strings.ToLower(msg), " ")
@@ -302,7 +300,7 @@ func onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	// Find the collection for the command we got
 	for _, coll := range COLLECTIONS {
-		if parts[0] == "!" + coll.Name {
+		if parts[0] == PREFIX + coll.Name {
 
 			// If they passed a specific sound effect, find and select that (otherwise play nothing)
 			var sound *Sound
@@ -340,8 +338,8 @@ func main() {
 	}
 
 	if *Prefix != "" {
-		Prefix = ("!%p", *Prefix)
-		fmt.Println("Sexy Prefix: ", Prefix)
+		PREFIX = *Prefix
+		log.Info("Custom prefix has been set to: ", PREFIX)
 	}
 
 	// Load all sounds and build collections
