@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/binary"
 	"flag"
 	"fmt"
@@ -329,17 +330,20 @@ func onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	// If this is a mention, it should come from the owner (otherwise we don't care)
-	if len(m.Mentions) > 0 && m.Author.ID == OWNER && len(parts) > 0 {
-		mentioned := false
+	if len(m.Mentions) > 0 && len(parts) > 1 {
+		owner := m.Author.ID == OWNER
 		for _, mention := range m.Mentions {
-			mentioned = (mention.ID == s.State.Ready.User.ID)
-			if mentioned {
-				log.Info(parts[0])
-				if(parts[1] == "reload") {
-					load()
+			if mention.ID == s.State.Ready.User.ID {
+				switch(parts[1]) {
+				case "help":
+					help(m)
+				case "reload":
+					if owner {
+						load()
+					}
 				}
-				break
 			}
+			break
 		}
 
 		return
@@ -480,6 +484,27 @@ func load() {
 	for _, coll := range COLLECTIONS {
 		coll.Load()
 	}
+}
+
+func help(m *discordgo.MessageCreate) {
+
+	// Create a buffer
+	var buffer bytes.Buffer
+
+	// Print out collections and sounds
+	buffer.WriteString("```md\n")
+	for _, coll := range COLLECTIONS {
+		buffer.WriteString(coll.Prefix + "\n")
+		buffer.WriteString(strings.Repeat("=", len(coll.Prefix)) + "\n")
+		for _, s := range coll.Sounds {
+			buffer.WriteString(s.Name + "\n")
+		}
+		buffer.WriteString("\n")
+	}
+	buffer.WriteString("```")
+
+	// Send to channel
+	discord.ChannelMessageSend(m.ChannelID, buffer.String())
 }
 
 // This function will be called (due to AddHandler above) every time a new
