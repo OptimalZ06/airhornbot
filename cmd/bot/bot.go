@@ -340,8 +340,8 @@ func main() {
 	}
 
 	if *Prefix != "" {
-		Prefix = ("!", *Prefix)
-		fmt.Println("error reading from dca file :", err)
+		Prefix = ("!%v", *Prefix)
+		fmt.Println("Sexy Prefix: ", Prefix)
 	}
 
 	// Load all sounds and build collections
