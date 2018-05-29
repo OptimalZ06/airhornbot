@@ -252,72 +252,64 @@ func onReady(s *discordgo.Session, event *discordgo.Ready) {
 }
 
 func onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if !strings.HasPrefix(m.Content, PREFIX) && len(m.Mentions) < 1 {
-	    return
-	}
 
-	msg := strings.Replace(m.ContentWithMentionsReplaced(), s.State.Ready.User.Username, "username", 1)
-	parts := strings.Split(strings.ToLower(msg), " ")
-
-	channel, _ := discord.State.Channel(m.ChannelID)
-	if channel == nil {
-		log.WithFields(log.Fields{
-			"channel": m.ChannelID,
-			"message": m.ID,
-		}).Warning("Failed to grab channel")
-		return
-	}
-
-	guild, _ := discord.State.Guild(channel.GuildID)
-	if guild == nil {
-		log.WithFields(log.Fields{
-			"guild":   channel.GuildID,
-			"channel": channel,
-			"message": m.ID,
-		}).Warning("Failed to grab guild")
-		return
-	}
-
-	// If this is a mention, it should come from the owner (otherwise we don't care)
-	if len(m.Mentions) > 0 && len(parts) > 1 {
-		owner := m.Author.ID == OWNER
-		for _, mention := range m.Mentions {
-			if mention.ID == s.State.Ready.User.ID {
-				switch(parts[1]) {
-				case "help":
-					help(m)
-				case "reload":
-					if owner {
-						load()
-					}
+	// We are being mentioned
+	if len(m.Mentions) > 0 {
+		if m.Mentions[0].ID == s.State.Ready.User.ID {
+			msg := strings.Trim(strings.ToLower(strings.Replace(m.ContentWithMentionsReplaced(), "@" + s.State.Ready.User.Username, "", 1)), " ")
+			owner := m.Author.ID == OWNER
+			switch(msg) {
+			case "help":
+				help(m)
+			case "reload":
+				if owner {
+					load()
 				}
 			}
-			break
 		}
 
-		return
-	}
-
 	// Find the collection for the command we got
-	for _, coll := range COLLECTIONS {
-		if parts[0] == PREFIX + coll.Name {
+	} else if strings.HasPrefix(m.Content, PREFIX) {
+		channel, _ := discord.State.Channel(m.ChannelID)
+		if channel == nil {
+			log.WithFields(log.Fields{
+				"channel": m.ChannelID,
+				"message": m.ID,
+			}).Warning("Failed to grab channel")
+			return
+		}
 
-			// If they passed a specific sound effect, find and select that (otherwise play nothing)
-			var sound *Sound
-			if len(parts) > 1 {
-				for _, s := range coll.Sounds {
-					if parts[1] == s.Name {
-						sound = s
+		guild, _ := discord.State.Guild(channel.GuildID)
+		if guild == nil {
+			log.WithFields(log.Fields{
+				"guild":   channel.GuildID,
+				"channel": channel,
+				"message": m.ID,
+			}).Warning("Failed to grab guild")
+			return
+		}
+
+		parts := strings.Split(strings.ToLower(m.Content[len(PREFIX):]), " ")
+		for _, coll := range COLLECTIONS {
+			if parts[0] == coll.Name {
+
+				// If they passed a specific sound effect, find and select that (otherwise play nothing)
+				var sound *Sound
+				if len(parts) > 1 {
+					for _, s := range coll.Sounds {
+						if parts[1] == s.Name {
+							sound = s
+						}
+					}
+
+					if sound == nil {
+						return
 					}
 				}
 
-				if sound == nil {
-					return
-				}
+				go enqueuePlay(m.Author, guild, coll, sound)
+				return
 			}
-
-			go enqueuePlay(m.Author, guild, coll, sound)
-			return
 		}
 	}
 }
