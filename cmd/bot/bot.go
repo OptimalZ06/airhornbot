@@ -253,32 +253,33 @@ func onReady(s *discordgo.Session, event *discordgo.Ready) {
 
 func onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
+	// Ignore all messages created by us
+	if m.Author.ID == s.State.User.ID {
+		return
+	}
+
+	// Get the channel
+	channel, _ := discord.State.Channel(m.ChannelID)
+	if channel == nil {
+		log.WithFields(log.Fields{
+			"channel": m.ChannelID,
+			"message": m.ID,
+		}).Warning("Failed to grab channel")
+
+	// No server, must be a DM
+	} else if channel.GuildID == "" {
+		command(m.Content, m)
+
 	// We are being mentioned
-	if len(m.Mentions) > 0 {
+	} else if len(m.Mentions) > 0 {
 		if m.Mentions[0].ID == s.State.Ready.User.ID {
-			msg := strings.Trim(strings.ToLower(strings.Replace(m.ContentWithMentionsReplaced(), "@" + s.State.Ready.User.Username, "", 1)), " ")
-			owner := m.Author.ID == OWNER
-			switch(msg) {
-			case "help":
-				help(m)
-			case "reload":
-				if owner {
-					load()
-				}
-			}
+			command(strings.Trim(strings.ToLower(strings.Replace(m.ContentWithMentionsReplaced(), "@" + s.State.Ready.User.Username, "", 1)), " "), m)
 		}
 
 	// Find the collection for the command we got
 	} else if strings.HasPrefix(m.Content, PREFIX) {
-		channel, _ := discord.State.Channel(m.ChannelID)
-		if channel == nil {
-			log.WithFields(log.Fields{
-				"channel": m.ChannelID,
-				"message": m.ID,
-			}).Warning("Failed to grab channel")
-			return
-		}
 
+		// Find the server
 		guild, _ := discord.State.Guild(channel.GuildID)
 		if guild == nil {
 			log.WithFields(log.Fields{
@@ -376,6 +377,42 @@ func main() {
 	<-c
 }
 
+// Execute a command
+func command(msg string, m *discordgo.MessageCreate) {
+	owner := m.Author.ID == OWNER
+	switch(msg) {
+	case "help":
+		help(m)
+	case "reload":
+		if owner {
+			load()
+		}
+	}
+}
+
+// Print out all the commands
+func help(m *discordgo.MessageCreate) {
+
+	// Create a buffer
+	var buffer bytes.Buffer
+
+	// Print out collections and sounds
+	buffer.WriteString("```md\n")
+	for _, coll := range COLLECTIONS {
+		command := PREFIX + coll.Name
+		buffer.WriteString(command + "\n" + strings.Repeat("=", len(command)) + "\n")
+		for _, s := range coll.Sounds {
+			buffer.WriteString(s.Name + "\n")
+		}
+		buffer.WriteString("\n")
+	}
+	buffer.WriteString("```")
+
+	// Send to channel
+	discord.ChannelMessageSend(m.ChannelID, buffer.String())
+}
+
+// Load collections and sounds from file
 func load() {
 	log.Info("Loading files and building collections")
 
@@ -428,28 +465,6 @@ func load() {
 	}
 }
 
-// Print out all the commands
-func help(m *discordgo.MessageCreate) {
-
-	// Create a buffer
-	var buffer bytes.Buffer
-
-	// Print out collections and sounds
-	buffer.WriteString("```md\n")
-	for _, coll := range COLLECTIONS {
-		command := PREFIX + coll.Name
-		buffer.WriteString(command + "\n" + strings.Repeat("=", len(command)) + "\n")
-		for _, s := range coll.Sounds {
-			buffer.WriteString(s.Name + "\n")
-		}
-		buffer.WriteString("\n")
-	}
-	buffer.WriteString("```")
-
-	// Send to channel
-	discord.ChannelMessageSend(m.ChannelID, buffer.String())
-}
-
 // This function will be called (due to AddHandler above) every time a new
 // guild is joined.
 func guildCreate(s *discordgo.Session, event *discordgo.GuildCreate) {
@@ -461,7 +476,7 @@ func guildCreate(s *discordgo.Session, event *discordgo.GuildCreate) {
 
 	for _, channel := range event.Guild.Channels {
 		if channel.ID == event.Guild.ID {
-			_, _ = s.ChannelMessageSend(channel.ID, "Airhorn is ready! Type !airhorn while in a voice channel to play a sound.")
+			_, _ = s.ChannelMessageSend(channel.ID, "Airhorn is ready! Type " + PREFIX + "airhorn while in a voice channel to play a sound.")
 			return
 		}
 	}
