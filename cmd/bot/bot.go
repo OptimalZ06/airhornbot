@@ -389,37 +389,35 @@ func load() {
 	}
 
 	// Loop through each file and store into a collections map
-	colls := make(map[string][]string)
+	var collection *SoundCollection
 	for _, file := range files {
 
 		// Only match files according to the regex below
 		rp := regexp.MustCompile("^([a-z]+)_([a-z]+)\\.dca$")
 		m := rp.FindAllStringSubmatch(file.Name(), -1)
-		if m != nil {
 
-			// Add to the groups collections
-			coll := m[0][1]
-			sound := m[0][2]
-			colls[coll] = append(colls[coll], sound)
-		}
-	}
-
-	// Loop through the groups collections we created and build a sound collection
-	for coll, sounds := range colls {
-
-		// Create an array of sounds
-		wee := []*Sound{}
-		for _, sound := range sounds {
-			wee = append(wee, &Sound{
-				Name:      sound,
-				buffer:    make([][]byte, 0),
-			})
+		// No matches found
+		if m == nil {
+			continue
 		}
 
-		// Append the sound collection to the collections
-		COLLECTIONS = append(COLLECTIONS, &SoundCollection{
-			Name: coll,
-			Sounds: wee,
+		// Assign the coll and sound
+		coll := m[0][1]
+		sound := m[0][2]
+
+		// Create and append the collection
+		if collection == nil || collection.Name != coll {
+			collection = &SoundCollection{
+				Name: coll,
+				Sounds: []*Sound{},
+			}
+			COLLECTIONS = append(COLLECTIONS, collection)
+		}
+
+		// Create and append the sound
+		collection.Sounds = append(collection.Sounds, &Sound{
+			Name: sound,
+			buffer: make([][]byte, 0),
 		})
 	}
 
