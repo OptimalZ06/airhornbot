@@ -13,6 +13,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
+	"syscall"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -22,15 +24,16 @@ import (
 var (
 	// discordgo session
 	discord *discordgo.Session
+	m sync.Mutex
 
 	// Map of Guild id's to *Play channels, used for queuing and rate-limiting guilds
 	queues map[string]chan *Play = make(map[string]chan *Play)
 
 	// Time delays
-	DELAY_AFTER_SOUND = time.Millisecond * 250
-	DELAY_BEFORE_SOUND = time.Millisecond * 32
+	DELAY_BEFORE_DISCONNECT = time.Millisecond * 250
+	DELAY_BEFORE_SOUND = time.Millisecond * 50
 	DELAY_CHANGE_CHANNEL = time.Millisecond * 250
-	DELAY_JOIN_CHANNEL = time.Second * 2
+	DELAY_JOIN_CHANNEL = time.Millisecond * 200
 
 	// Sound encoding settings
 	BITRATE        = 128
@@ -49,9 +52,6 @@ type Play struct {
 	ChannelID string
 	UserID    string
 	Sound     *Sound
-
-	// The next play to occur after this, only used for chaining sounds like anotha
-	Next *Play
 }
 
 type SoundCollection struct {
@@ -182,68 +182,65 @@ func enqueuePlay(user *discordgo.User, guild *discordgo.Guild, coll *SoundCollec
 		return
 	}
 
-	// Check if we already have a connection to this guild
-	//   yes, this isn't threadsafe, but its "OK" 99% of the time
+	m.Lock()
 	_, exists := queues[guild.ID]
-
 	if exists {
 		if len(queues[guild.ID]) < MAX_QUEUE_SIZE {
 			queues[guild.ID] <- play
 		}
 	} else {
 		queues[guild.ID] = make(chan *Play, MAX_QUEUE_SIZE)
-		playSound(play, nil)
+		go playSound(play, nil)
 	}
+	m.Unlock()
 }
 
 // Play a sound
-func playSound(play *Play, vc *discordgo.VoiceConnection) (err error) {
+func playSound(play *Play, vc *discordgo.VoiceConnection) {
 	log.WithFields(log.Fields{
 		"play": play,
 	}).Info("Playing sound")
 
+	// Create channel
 	if vc == nil {
 		time.Sleep(DELAY_JOIN_CHANNEL)
+		var err error
 		vc, err = discord.ChannelVoiceJoin(play.GuildID, play.ChannelID, false, false)
-		// vc.Receive = false
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error": err,
 			}).Error("Failed to play sound")
-			delete(queues, play.GuildID)
-			return err
+			vc = nil
 		}
-	}
 
-	// If we need to change channels, do that now
-	if vc.ChannelID != play.ChannelID {
-		vc.ChangeChannel(play.ChannelID, false, false)
+	// Change channel
+	} else if vc.ChannelID != play.ChannelID {
 		time.Sleep(DELAY_CHANGE_CHANNEL)
+		vc.ChangeChannel(play.ChannelID, false, false)
 	}
-
-	// Sleep for a specified amount of time before playing the sound
-	time.Sleep(DELAY_BEFORE_SOUND)
 
 	// Play the sound
-	play.Sound.Play(vc)
-
-	// If this is chained, play the chained sound
-	if play.Next != nil {
-		playSound(play.Next, vc)
+	if vc != nil {
+		time.Sleep(DELAY_BEFORE_SOUND)
+		play.Sound.Play(vc)
 	}
 
-	// If there is another song in the queue, recurse and play that
+	// Keep playing
+	m.Lock()
 	if len(queues[play.GuildID]) > 0 {
 		play := <-queues[play.GuildID]
+		m.Unlock()
 		playSound(play, vc)
-		return nil
-	}
 
-	// If the queue is empty, delete it
-	time.Sleep(DELAY_AFTER_SOUND)
-	delete(queues, play.GuildID)
-	vc.Disconnect()
-	return nil
+	// Disconnect and empty queue
+	} else {
+		time.Sleep(DELAY_BEFORE_DISCONNECT)
+		delete(queues, play.GuildID)
+		if vc != nil {
+			vc.Disconnect()
+		}
+		m.Unlock()
+	}
 }
 
 func onReady(s *discordgo.Session, event *discordgo.Ready) {
@@ -308,7 +305,7 @@ func onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 					}
 				}
 
-				go enqueuePlay(m.Author, guild, coll, sound)
+				enqueuePlay(m.Author, guild, coll, sound)
 				return
 			}
 		}
@@ -372,9 +369,12 @@ func main() {
 	log.Info("AIRHORNBOT is ready to horn it up.")
 
 	// Wait for a signal to quit
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, os.Kill)
-	<-c
+	sc := make(chan os.Signal, 1)
+	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
+	<-sc
+
+	// Cleanly close down the Discord session.
+	discord.Close()
 }
 
 // Execute a command
