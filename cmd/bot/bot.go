@@ -75,6 +75,71 @@ func (sc *SoundCollection) Load() {
 	}
 }
 
+func main() {
+	var (
+		Token      = flag.String("t", "", "Discord Authentication Token")
+		Shard      = flag.String("s", "", "Shard ID")
+		ShardCount = flag.String("c", "", "Number of shards")
+		Owner      = flag.String("o", "", "Owner ID")
+		Prefix		 = flag.String("p", "", "Prefix for commands")
+		err        error
+	)
+	flag.Parse()
+
+	if *Owner != "" {
+		OWNER = *Owner
+	}
+
+	if *Prefix != "" {
+		PREFIX = *Prefix
+		log.Info("Custom prefix has been set to: ", PREFIX)
+	}
+
+	// Load all sounds and build collections
+	load()
+
+	// Create a discord session
+	log.Info("Starting discord session...")
+	discord, err = discordgo.New("Bot " + *Token)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Fatal("Failed to create discord session")
+		return
+	}
+
+	// Set sharding info
+	discord.ShardID, _ = strconv.Atoi(*Shard)
+	discord.ShardCount, _ = strconv.Atoi(*ShardCount)
+	if discord.ShardCount <= 0 {
+		discord.ShardCount = 1
+	}
+
+	// Register call backs
+	discord.AddHandler(onReady)
+	discord.AddHandler(onMessageCreate)
+	discord.AddHandler(guildCreate)
+
+	err = discord.Open()
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Fatal("Failed to create discord websocket connection")
+		return
+	}
+
+	// We're running!
+	log.Info("AIRHORNBOT is ready to horn it up.")
+
+	// Wait for a signal to quit
+	sc := make(chan os.Signal, 1)
+	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
+	<-sc
+
+	// Cleanly close down the Discord session.
+	discord.Close()
+}
+
 // Load attempts to load an encoded sound file from disk
 // DCA files are pre-computed sound files that are easy to send to Discord.
 // If you would like to create your own DCA files, please use:
@@ -314,71 +379,6 @@ func onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			}
 		}
 	}
-}
-
-func main() {
-	var (
-		Token      = flag.String("t", "", "Discord Authentication Token")
-		Shard      = flag.String("s", "", "Shard ID")
-		ShardCount = flag.String("c", "", "Number of shards")
-		Owner      = flag.String("o", "", "Owner ID")
-		Prefix		 = flag.String("p", "", "Prefix for commands")
-		err        error
-	)
-	flag.Parse()
-
-	if *Owner != "" {
-		OWNER = *Owner
-	}
-
-	if *Prefix != "" {
-		PREFIX = *Prefix
-		log.Info("Custom prefix has been set to: ", PREFIX)
-	}
-
-	// Load all sounds and build collections
-	load()
-
-	// Create a discord session
-	log.Info("Starting discord session...")
-	discord, err = discordgo.New("Bot " + *Token)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-		}).Fatal("Failed to create discord session")
-		return
-	}
-
-	// Set sharding info
-	discord.ShardID, _ = strconv.Atoi(*Shard)
-	discord.ShardCount, _ = strconv.Atoi(*ShardCount)
-	if discord.ShardCount <= 0 {
-		discord.ShardCount = 1
-	}
-
-	// Register call backs
-	discord.AddHandler(onReady)
-	discord.AddHandler(onMessageCreate)
-	discord.AddHandler(guildCreate)
-
-	err = discord.Open()
-	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-		}).Fatal("Failed to create discord websocket connection")
-		return
-	}
-
-	// We're running!
-	log.Info("AIRHORNBOT is ready to horn it up.")
-
-	// Wait for a signal to quit
-	sc := make(chan os.Signal, 1)
-	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
-	<-sc
-
-	// Cleanly close down the Discord session.
-	discord.Close()
 }
 
 // Execute a command
