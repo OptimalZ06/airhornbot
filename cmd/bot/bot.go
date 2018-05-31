@@ -183,8 +183,7 @@ func enqueuePlay(user *discordgo.User, guild *discordgo.Guild, coll *SoundCollec
 	}
 
 	m.Lock()
-	_, exists := queues[guild.ID]
-	if exists {
+	if _, ok := queues[guild.ID]; ok {
 		if len(queues[guild.ID]) < MAX_QUEUE_SIZE {
 			queues[guild.ID] <- play
 		}
@@ -248,7 +247,7 @@ func playSound(play *Play, vc *discordgo.VoiceConnection) {
 	}
 
 	// Unlock
-	defer m.Unlock()
+	m.Unlock()
 }
 
 func onReady(s *discordgo.Session, event *discordgo.Ready) {
@@ -260,12 +259,9 @@ func onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	// Ignore all messages created by us
 	if m.Author.ID == s.State.User.ID {
-		return
-	}
 
 	// Get the channel
-	channel, _ := discord.State.Channel(m.ChannelID)
-	if channel == nil {
+	} else if channel, _ := discord.State.Channel(m.ChannelID); channel == nil {
 		log.WithFields(log.Fields{
 			"channel": m.ChannelID,
 			"message": m.ID,
