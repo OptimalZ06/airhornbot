@@ -219,28 +219,36 @@ func playSound(play *Play, vc *discordgo.VoiceConnection) {
 		vc.ChangeChannel(play.ChannelID, false, false)
 	}
 
-	// Play the sound
+	// If we have a connection
 	if vc != nil {
+
+		// Play the sound
 		time.Sleep(DELAY_BEFORE_SOUND)
 		play.Sound.Play(vc)
+
+		// Disconnect if queue is empty
+		if len(queues[play.GuildID]) == 0 {
+			time.Sleep(DELAY_BEFORE_DISCONNECT)
+			vc.Disconnect()
+			vc = nil
+		}
 	}
+
+	// Lock
+	m.Lock()
 
 	// Keep playing
-	m.Lock()
 	if len(queues[play.GuildID]) > 0 {
 		play := <-queues[play.GuildID]
-		m.Unlock()
-		playSound(play, vc)
+		defer playSound(play, vc)
 
-	// Disconnect and empty queue
+	// Delete the queue
 	} else {
-		time.Sleep(DELAY_BEFORE_DISCONNECT)
 		delete(queues, play.GuildID)
-		if vc != nil {
-			vc.Disconnect()
-		}
-		m.Unlock()
 	}
+
+	// Unlock
+	defer m.Unlock()
 }
 
 func onReady(s *discordgo.Session, event *discordgo.Ready) {
@@ -476,7 +484,7 @@ func guildCreate(s *discordgo.Session, event *discordgo.GuildCreate) {
 
 	for _, channel := range event.Guild.Channels {
 		if channel.ID == event.Guild.ID {
-			_, _ = s.ChannelMessageSend(channel.ID, "Airhorn is ready! Type " + PREFIX + "airhorn while in a voice channel to play a sound.")
+			//_, _ = s.ChannelMessageSend(channel.ID, "Airhorn is ready! Type " + PREFIX + "airhorn while in a voice channel to play a sound.")
 			return
 		}
 	}
