@@ -434,32 +434,26 @@ func load() {
 	for _, file := range files {
 
 		// Only match files according to the regex below
-		rp := regexp.MustCompile("^([a-z]+)_([a-z]+)\\.dca$")
-		m := rp.FindAllStringSubmatch(file.Name(), -1)
+		r := regexp.MustCompile("^([a-z]+)_([a-z]+)\\.dca$")
 
-		// No matches found
-		if m == nil {
-			continue
-		}
+		// Match found
+		if m := r.FindStringSubmatch(file.Name()); m != nil {
 
-		// Assign the coll and sound
-		coll := m[0][1]
-		sound := m[0][2]
-
-		// Create and append the collection
-		if collection == nil || collection.Name != coll {
-			collection = &SoundCollection{
-				Name: coll,
-				Sounds: []*Sound{},
+			// Create and append the collection
+			if collection == nil || collection.Name != m[1] {
+				collection = &SoundCollection{
+					Name: m[1],
+					Sounds: []*Sound{},
+				}
+				COLLECTIONS = append(COLLECTIONS, collection)
 			}
-			COLLECTIONS = append(COLLECTIONS, collection)
-		}
 
-		// Create and append the sound
-		collection.Sounds = append(collection.Sounds, &Sound{
-			Name: sound,
-			buffer: make([][]byte, 0),
-		})
+			// Create and append the sound
+			collection.Sounds = append(collection.Sounds, &Sound{
+				Name: m[2],
+				buffer: make([][]byte, 0),
+			})
+		}
 	}
 
 	// Preload all the sounds
