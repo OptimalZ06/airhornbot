@@ -20,18 +20,18 @@ https://discordapp.com/api/oauth2/authorize?client_id=<YOUR_CLIENT_ID>&scope=bot
 #### Install the bot:
 Like on a server or maybe a pi if you're cool enough. Grab it and compile that sucker.
 ```
-go get github.com/calebjessie/airhornbot/cmd/bot
-go install github.com/calebjessie/airhornbot/cmd/bot
+go get github.com/calebjessie/airhornbot
+go install github.com/calebjessie/airhornbot
 ```
 #### Start 'er up:
 Go to the root of the bot folder, i.e., `../github.com/calebjessie/airhornbot/`
 Before you do this make sure GOPATH environment variable set correctly.
 ```
-/.$GOPATH/bin/bot -t "MY_BOT_ACCOUNT_TOKEN" -o OWNER_ID
+/.$GOPATH/bin/airhornbot -t "MY_BOT_ACCOUNT_TOKEN" -o OWNER_ID
 ```
 
 ## Thanks to the original devs
 Thanks to the awesome (one might describe them as smart... loyal... appreciative...) [iopred](https://github.com/iopred) and [bwmarrin](https://github.com/bwmarrin/discordgo) for helping code review the initial release.
 
 ## That yung todo
-1. Fix disconnect/reconnect bug. Bot gets stuck in voice channel.
+1. What now
