@@ -21,16 +21,21 @@ import (
 var (
 	// discordgo session
 	discord *discordgo.Session
-	m sync.Mutex
 
 	// Map of Guild id's to *Play channels, used for queuing and rate-limiting guilds
 	queues map[string]chan *Play = make(map[string]chan *Play)
+
+	// Mutex
+	m sync.Mutex
 
 	// Time delays
 	DELAY_BEFORE_DISCONNECT = time.Millisecond * 250
 	DELAY_BEFORE_SOUND = time.Millisecond * 50
 	DELAY_CHANGE_CHANNEL = time.Millisecond * 250
 	DELAY_JOIN_CHANNEL = time.Millisecond * 200
+
+	// Collections
+	COLLECTIONS []*SoundCollection = []*SoundCollection{}
 
 	// Sound encoding settings
 	BITRATE        = 128
@@ -42,8 +47,6 @@ var (
 	// Owner
 	OWNER string
 )
-
-var COLLECTIONS []*SoundCollection = []*SoundCollection{}
 
 func main() {
 	var (
