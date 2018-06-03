@@ -31,21 +31,24 @@ var (
 	// Time delays
 	DELAY_BEFORE_DISCONNECT = time.Millisecond * 250
 	DELAY_BEFORE_SOUND = time.Millisecond * 50
+	DELAY_BEFORE_SOUND_CHAIN = time.Millisecond * 25
 	DELAY_CHANGE_CHANNEL = time.Millisecond * 250
-	DELAY_JOIN_CHANNEL = time.Millisecond * 200
+	DELAY_JOIN_CHANNEL = time.Millisecond * 175
 
 	// Collections
 	COLLECTIONS []*SoundCollection = []*SoundCollection{}
-
-	// Sound encoding settings
-	BITRATE        = 128
-	MAX_QUEUE_SIZE = 6
 
 	// Commands prefix
 	PREFIX = "!"
 
 	// Owner
 	OWNER string
+)
+
+// Limits
+const (
+	MAX_CHAIN_SIZE = 3
+	MAX_QUEUE_SIZE = 6
 )
 
 func main() {
@@ -68,6 +71,9 @@ func main() {
 		log.Info("Custom prefix has been set to: ", PREFIX)
 	}
 
+	// Create a new random seed
+	rand.Seed(time.Now().UTC().UnixNano())
+
 	// Load all sounds and build collections
 	load()
 
@@ -88,10 +94,8 @@ func main() {
 		discord.ShardCount = 1
 	}
 
-	// Register call backs
-	discord.AddHandler(onReady)
-	discord.AddHandler(onMessageCreate)
-	discord.AddHandler(guildCreate)
+	// Add handlers
+	addHandlers()
 
 	err = discord.Open()
 	if err != nil {
@@ -126,51 +130,19 @@ func getCurrentVoiceChannel(user *discordgo.User, guild *discordgo.Guild) *disco
 
 // Returns a random integer between min and max
 func randomRange(min, max int) int {
-	rand.Seed(time.Now().UTC().UnixNano())
 	return rand.Intn(max-min) + min
 }
 
-// Prepares a play
-func createPlay(user *discordgo.User, guild *discordgo.Guild, coll *SoundCollection, sound *Sound) *Play {
-
-	// Grab the users voice channel
-	channel := getCurrentVoiceChannel(user, guild)
-	if channel == nil {
-		log.WithFields(log.Fields{
-			"user":  user.ID,
-			"guild": guild.ID,
-		}).Warning("Failed to find channel to play sound in")
-		return nil
-	}
-
-	// If we didn't get passed a manual sound, generate a random one
-	if sound == nil {
-		sound = coll.Sounds[randomRange(0, len(coll.Sounds))]
-	}
-
-	// Create the play
-	return &Play{
-		GuildID:   guild.ID,
-		ChannelID: channel.ID,
-		UserID:    user.ID,
-		Sound:     sound,
-	}
-}
 
 // Prepares and enqueues a play into the ratelimit/buffer guild queue
-func enqueuePlay(user *discordgo.User, guild *discordgo.Guild, coll *SoundCollection, sound *Sound) {
-	play := createPlay(user, guild, coll, sound)
-	if play == nil {
-		return
-	}
-
+func enqueuePlay(play *Play) {
 	m.Lock()
-	if _, ok := queues[guild.ID]; ok {
-		if len(queues[guild.ID]) < MAX_QUEUE_SIZE {
-			queues[guild.ID] <- play
+	if _, ok := queues[play.GuildID]; ok {
+		if len(queues[play.GuildID]) < MAX_QUEUE_SIZE {
+			queues[play.GuildID] <- play
 		}
 	} else {
-		queues[guild.ID] = make(chan *Play, MAX_QUEUE_SIZE)
+		queues[play.GuildID] = make(chan *Play, MAX_QUEUE_SIZE)
 		go playSound(play, nil)
 	}
 	m.Unlock()
@@ -205,7 +177,10 @@ func playSound(play *Play, vc *discordgo.VoiceConnection) {
 
 		// Play the sound
 		time.Sleep(DELAY_BEFORE_SOUND)
-		play.Sound.Play(vc)
+		for sound := range play.Sounds {
+			time.Sleep(DELAY_BEFORE_SOUND_CHAIN)
+			sound.Play(vc)
+		}
 
 		// Disconnect if queue is empty
 		if len(queues[play.GuildID]) == 0 {
@@ -230,72 +205,6 @@ func playSound(play *Play, vc *discordgo.VoiceConnection) {
 
 	// Unlock
 	m.Unlock()
-}
-
-func onReady(s *discordgo.Session, event *discordgo.Ready) {
-	log.Info("Recieved READY payload")
-	s.UpdateStatus(0, "airhornbot.com")
-}
-
-func onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
-
-	// Ignore all messages created by us
-	if m.Author.ID == s.State.User.ID {
-
-	// Get the channel
-	} else if channel, _ := discord.State.Channel(m.ChannelID); channel == nil {
-		log.WithFields(log.Fields{
-			"channel": m.ChannelID,
-			"message": m.ID,
-		}).Warning("Failed to grab channel")
-
-	// No server, must be a DM
-	} else if channel.GuildID == "" {
-		command(m.Content, m)
-
-	// We are being mentioned
-	} else if len(m.Mentions) > 0 {
-		if m.Mentions[0].ID == s.State.Ready.User.ID {
-			command(strings.Trim(strings.ToLower(strings.Replace(m.ContentWithMentionsReplaced(), "@" + s.State.Ready.User.Username, "", 1)), " "), m)
-		}
-
-	// Find the collection for the command we got
-	} else if strings.HasPrefix(m.Content, PREFIX) {
-
-		// Find the server
-		guild, _ := discord.State.Guild(channel.GuildID)
-		if guild == nil {
-			log.WithFields(log.Fields{
-				"guild":   channel.GuildID,
-				"channel": channel,
-				"message": m.ID,
-			}).Warning("Failed to grab guild")
-			return
-		}
-
-		parts := strings.Split(strings.ToLower(m.Content[len(PREFIX):]), " ")
-		for _, coll := range COLLECTIONS {
-			if parts[0] == coll.Name {
-
-				// If they passed a specific sound effect, find and select that (otherwise play nothing)
-				var sound *Sound
-				if len(parts) > 1 {
-					for _, s := range coll.Sounds {
-						if parts[1] == s.Name {
-							sound = s
-						}
-					}
-
-					if sound == nil {
-						return
-					}
-				}
-
-				enqueuePlay(m.Author, guild, coll, sound)
-				return
-			}
-		}
-	}
 }
 
 // Execute a command
@@ -377,22 +286,5 @@ func load() {
 	log.Info("Preloading sounds...")
 	for _, coll := range COLLECTIONS {
 		coll.Load()
-	}
-}
-
-// This function will be called (due to AddHandler above) every time a new
-// guild is joined.
-func guildCreate(s *discordgo.Session, event *discordgo.GuildCreate) {
-	log.Info("Guild create function has ran!")
-
-	if event.Guild.Unavailable {
-		return
-	}
-
-	for _, channel := range event.Guild.Channels {
-		if channel.ID == event.Guild.ID {
-			//_, _ = s.ChannelMessageSend(channel.ID, "Airhorn is ready! Type " + PREFIX + "airhorn while in a voice channel to play a sound.")
-			return
-		}
 	}
 }
