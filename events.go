@@ -90,7 +90,6 @@ func onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 					for _, s := range coll.Sounds {
 						if parts[i] == s.Name {
 							sounds <- s
-							log.Info(s.Name)
 							found = true
 							i++
 							break
@@ -101,9 +100,7 @@ func onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 					}
 				}
 				if j == i {
-					s := coll.Sounds[randomRange(0, len(coll.Sounds))]
-					log.Info(s.Name)
-					sounds <- s
+					sounds <- coll.Sounds[randomRange(0, len(coll.Sounds))]
 				}
 			} else {
 				log.Info("Could not find the collection " + parts[i])
