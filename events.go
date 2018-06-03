@@ -115,7 +115,13 @@ func onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 
 		// Grab the users voice channel
-		channel := getCurrentVoiceChannel(m.Author, guild)
+		var channel *discordgo.Channel
+		for _, vs := range guild.VoiceStates {
+			if vs.UserID == m.Author.ID {
+				channel, _ = discord.State.Channel(vs.ChannelID)
+				break
+			}
+		}
 		if channel == nil {
 			log.WithFields(log.Fields{
 				"user":  m.Author.ID,
@@ -125,11 +131,11 @@ func onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 
 		// Queue
-		enqueuePlay(&Play{
+		(&Play{
 			GuildID: guild.ID,
 			ChannelID: channel.ID,
 			Sounds: sounds,
-		})
+		}).enqueue()
 	}
 }
 

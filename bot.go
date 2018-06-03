@@ -4,13 +4,11 @@ import (
 	"bytes"
 	"flag"
 	"io/ioutil"
-	"math/rand"
 	"os"
 	"os/signal"
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
@@ -21,12 +19,6 @@ import (
 var (
 	// discordgo session
 	discord *discordgo.Session
-
-	// Map of Guild id's to *Play channels, used for queuing and rate-limiting guilds
-	queues map[string]chan *Play = make(map[string]chan *Play)
-
-	// Mutex
-	m sync.Mutex
 
 	// Collections
 	COLLECTIONS []*Collection
@@ -70,9 +62,6 @@ func main() {
 		log.Info("Custom prefix has been set to: ", PREFIX)
 	}
 
-	// Create a new random seed
-	rand.Seed(time.Now().UTC().UnixNano())
-
 	// Load all sounds and build collections
 	load()
 
@@ -115,96 +104,6 @@ func main() {
 
 	// Close Discord session.
 	discord.Close()
-}
-
-// Attempts to find the current users voice channel inside a given guild
-func getCurrentVoiceChannel(user *discordgo.User, guild *discordgo.Guild) *discordgo.Channel {
-	for _, vs := range guild.VoiceStates {
-		if vs.UserID == user.ID {
-			channel, _ := discord.State.Channel(vs.ChannelID)
-			return channel
-		}
-	}
-	return nil
-}
-
-// Returns a random integer between min and max
-func randomRange(min, max int) int {
-	return rand.Intn(max-min) + min
-}
-
-
-// Prepares and enqueues a play into the ratelimit/buffer guild queue
-func enqueuePlay(play *Play) {
-	m.Lock()
-	if _, ok := queues[play.GuildID]; ok {
-		if len(queues[play.GuildID]) < MAX_QUEUE_SIZE {
-			queues[play.GuildID] <- play
-		}
-	} else {
-		queues[play.GuildID] = make(chan *Play, MAX_QUEUE_SIZE)
-		go playSound(play, nil)
-	}
-	m.Unlock()
-}
-
-// Play a sound
-func playSound(play *Play, vc *discordgo.VoiceConnection) {
-	log.WithFields(log.Fields{
-		"play": play,
-	}).Info("Playing sound")
-
-	// Create channel
-	if vc == nil {
-		time.Sleep(DELAY_JOIN_CHANNEL)
-		var err error
-		vc, err = discord.ChannelVoiceJoin(play.GuildID, play.ChannelID, false, false)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"error": err,
-			}).Error("Failed to play sound")
-			vc = nil
-		}
-
-	// Change channel
-	} else if vc.ChannelID != play.ChannelID {
-		time.Sleep(DELAY_CHANGE_CHANNEL)
-		vc.ChangeChannel(play.ChannelID, false, false)
-	}
-
-	// If we have a connection
-	if vc != nil {
-
-		// Play the sound
-		time.Sleep(DELAY_BEFORE_SOUND)
-		for sound := range play.Sounds {
-			time.Sleep(DELAY_BEFORE_SOUND_CHAIN)
-			sound.Play(vc)
-		}
-
-		// Disconnect if queue is empty
-		if len(queues[play.GuildID]) == 0 {
-			time.Sleep(DELAY_BEFORE_DISCONNECT)
-			vc.Disconnect()
-			vc = nil
-		}
-	}
-
-	// Lock
-	m.Lock()
-
-	// Keep playing
-	if len(queues[play.GuildID]) > 0 {
-		play := <-queues[play.GuildID]
-		defer playSound(play, vc)
-
-	// Delete the queue
-	} else {
-		delete(queues, play.GuildID)
-	}
-
-	// Unlock
-	m.Unlock()
 }
 
 // Execute a command
