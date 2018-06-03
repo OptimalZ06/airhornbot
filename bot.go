@@ -66,7 +66,7 @@ func main() {
 	load()
 
 	// Create a discord session
-	log.Info("Starting discord session...")
+	log.Info("Starting discord session boi...")
 	discord, err = discordgo.New("Bot " + *Token)
 	if err != nil {
 		log.WithFields(log.Fields{
