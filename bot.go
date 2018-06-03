@@ -28,15 +28,8 @@ var (
 	// Mutex
 	m sync.Mutex
 
-	// Time delays
-	DELAY_BEFORE_DISCONNECT = time.Millisecond * 250
-	DELAY_BEFORE_SOUND = time.Millisecond * 50
-	DELAY_BEFORE_SOUND_CHAIN = time.Millisecond * 25
-	DELAY_CHANGE_CHANNEL = time.Millisecond * 250
-	DELAY_JOIN_CHANNEL = time.Millisecond * 175
-
 	// Collections
-	COLLECTIONS []*SoundCollection = []*SoundCollection{}
+	COLLECTIONS []*Collection
 
 	// Commands prefix
 	PREFIX = "!"
@@ -44,9 +37,16 @@ var (
 	// Owner
 	OWNER string
 )
-
-// Limits
 const (
+
+	// Time delays
+	DELAY_BEFORE_DISCONNECT = time.Millisecond * 250
+	DELAY_BEFORE_SOUND = time.Millisecond * 50
+	DELAY_BEFORE_SOUND_CHAIN = time.Millisecond * 25
+	DELAY_CHANGE_CHANNEL = time.Millisecond * 250
+	DELAY_JOIN_CHANNEL = time.Millisecond * 175
+
+	// Limits
 	MAX_CHAIN_SIZE = 3
 	MAX_QUEUE_SIZE = 6
 )
@@ -65,7 +65,6 @@ func main() {
 	if *Owner != "" {
 		OWNER = *Owner
 	}
-
 	if *Prefix != "" {
 		PREFIX = *Prefix
 		log.Info("Custom prefix has been set to: ", PREFIX)
@@ -97,6 +96,7 @@ func main() {
 	// Add handlers
 	addHandlers()
 
+	// Open Discord session
 	err = discord.Open()
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -113,7 +113,7 @@ func main() {
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc
 
-	// Cleanly close down the Discord session.
+	// Close Discord session.
 	discord.Close()
 }
 
@@ -247,7 +247,7 @@ func load() {
 	log.Info("Loading files and building collections")
 
 	// Reset the collections
-	COLLECTIONS = []*SoundCollection{}
+	COLLECTIONS = []*Collection{}
 
 	// Read all files from the audio directory
 	files, err := ioutil.ReadDir("audio")
@@ -256,7 +256,7 @@ func load() {
 	}
 
 	// Loop through each file and store into a collections map
-	var collection *SoundCollection
+	var collection *Collection
 	for _, file := range files {
 
 		// Only match files according to the regex below
@@ -267,7 +267,7 @@ func load() {
 
 			// Create and append the collection
 			if collection == nil || collection.Name != m[1] {
-				collection = &SoundCollection{
+				collection = &Collection{
 					Name: m[1],
 					Sounds: []*Sound{},
 				}

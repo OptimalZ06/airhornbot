@@ -56,6 +56,52 @@ func onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	// Find the collection for the command we got
 	} else if strings.HasPrefix(m.Content, PREFIX) {
+		parts := strings.Split(strings.ToLower(m.Content[len(PREFIX):]), " ")
+		sounds := make(chan *Sound, MAX_CHAIN_SIZE)
+
+		// Loop through each part
+		for i, plen := 0, len(parts); i < plen; {
+			var (
+				coll *Collection
+				sound *Sound
+			)
+
+			// Find a collection
+			for _, c := range COLLECTIONS {
+				if parts[i] == c.Name {
+					coll = c
+					goto findSound
+				}
+			}
+			log.Info("Could not find the collection " + parts[i])
+			return
+
+			// Find a sound
+			findSound:
+			i++
+			if i < plen {
+				if s := coll.Find(parts[i]); s != nil {
+					sound = s
+					goto addSound
+				}
+			}
+			if sound != nil {
+				continue
+			}
+
+			// Add a sound
+			addSound:
+			if len(sounds) == MAX_CHAIN_SIZE {
+				log.Info("Over channel size limit")
+				return
+			}
+			if sound != nil {
+				sounds <- sound
+				goto findSound
+			}
+			sounds <- coll.Sounds[randomRange(0, len(coll.Sounds))]
+		}
+		close(sounds)
 
 		// Find the server
 		guild, _ := discord.State.Guild(channel.GuildID)
@@ -68,64 +114,22 @@ func onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			return
 		}
 
-		parts := strings.Split(strings.ToLower(m.Content[len(PREFIX):]), " ")
-		sounds :=  make(chan *Sound, MAX_CHAIN_SIZE)
-		for i := 0; i < len(parts); {
-			if len(sounds) == MAX_CHAIN_SIZE {
-				log.Info("Over channel size limit")
-				return
-			}
-			var coll *SoundCollection
-			for _, c := range COLLECTIONS {
-				if parts[i] == c.Name {
-					coll = c
-					i++
-					break
-				}
-			}
-			if coll != nil {
-				j := i
-				for i < len(parts) {
-					found := false
-					for _, s := range coll.Sounds {
-						if parts[i] == s.Name {
-							sounds <- s
-							found = true
-							i++
-							break
-						}
-					}
-					if found == false {
-						break
-					}
-				}
-				if j == i {
-					sounds <- coll.Sounds[randomRange(0, len(coll.Sounds))]
-				}
-			} else {
-				log.Info("Could not find the collection " + parts[i])
-				return
-			}
+		// Grab the users voice channel
+		channel := getCurrentVoiceChannel(m.Author, guild)
+		if channel == nil {
+			log.WithFields(log.Fields{
+				"user":  m.Author.ID,
+				"guild": guild.ID,
+			}).Warning("Failed to find channel to play sound in")
+			return
 		}
-		if len(sounds) > 0 {
-			close(sounds)
 
-			// Grab the users voice channel
-			channel := getCurrentVoiceChannel(m.Author, guild)
-			if channel == nil {
-				log.WithFields(log.Fields{
-					"user":  m.Author.ID,
-					"guild": guild.ID,
-				}).Warning("Failed to find channel to play sound in")
-				return
-			}
-
-			enqueuePlay(&Play{
-				GuildID: guild.ID,
-				ChannelID: channel.ID,
-				Sounds: sounds,
-			})
-		}
+		// Queue
+		enqueuePlay(&Play{
+			GuildID: guild.ID,
+			ChannelID: channel.ID,
+			Sounds: sounds,
+		})
 	}
 }
 

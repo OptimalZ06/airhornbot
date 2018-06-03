@@ -21,7 +21,7 @@ type Sound struct {
 // If you would like to create your own DCA files, please use:
 // https://github.com/nstafie/dca-rs
 // eg: dca-rs --raw -i <input wav file> > <output file>
-func (s *Sound) Load(c *SoundCollection) error {
+func (s *Sound) Load(c *Collection) error {
 	path := fmt.Sprintf("audio/%v_%v.dca", c.Name, s.Name)
 
 	file, err := os.Open(path)
