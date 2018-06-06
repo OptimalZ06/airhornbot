@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -34,11 +35,14 @@ func onGuildCreate(s *discordgo.Session, event *discordgo.GuildCreate) {
 
 func onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
+	// Make message lower case
+	m.Content = strings.ToLower(m.Content)
+
 	// Ignore all messages created by us
 	if m.Author.ID == s.State.User.ID {
 
 	// Get the channel
-	} else if channel, _ := discord.State.Channel(m.ChannelID); channel == nil {
+	} else if channel, _ := s.State.Channel(m.ChannelID); channel == nil {
 		log.WithFields(log.Fields{
 			"channel": m.ChannelID,
 			"message": m.ID,
@@ -51,20 +55,28 @@ func onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	// We are being mentioned
 	} else if len(m.Mentions) > 0 {
 		if m.Mentions[0].ID == s.State.Ready.User.ID {
-			command(strings.Trim(strings.ToLower(strings.Replace(m.ContentWithMentionsReplaced(), "@" + s.State.Ready.User.Username, "", 1)), " "), m)
+			command(strings.Trim(strings.Replace(m.ContentWithMentionsReplaced(), "@" + s.State.Ready.User.Username, "", 1), " "), m)
 		}
 
 	// Find the collection for the command we got
 	} else if strings.HasPrefix(m.Content, PREFIX) {
-		parts := strings.Split(strings.ToLower(m.Content[len(PREFIX):]), " ")
-		sounds := make(chan *Sound, MAX_CHAIN_SIZE)
 
-		// Loop through each part
+		// Split message by spaces after prefix
+		parts := strings.Split(m.Content[len(PREFIX):], " ")
+
+		// Loop through each part and build a channel of sounds
+		sounds := make(chan *Sound, MAX_CHAIN_SIZE)
 		for i, plen := 0, len(parts); i < plen; {
 			var (
 				coll *Collection
 				sound *Sound
 			)
+
+			// Skip extra spacing
+			if parts[i] == "" {
+				i++
+				continue
+			}
 
 			// Find a collection
 			for _, c := range COLLECTIONS {
@@ -73,7 +85,7 @@ func onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 					goto findSound
 				}
 			}
-			log.Info("Could not find the collection " + parts[i])
+			dm(m.Author, "Could not find a sound called " + parts[i])
 			return
 
 			// Find a sound
@@ -92,7 +104,7 @@ func onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			// Add a sound
 			addSound:
 			if len(sounds) == MAX_CHAIN_SIZE {
-				log.Info("Over channel size limit")
+				dm(m.Author, "Too many sounds requested. Limit is " + strconv.Itoa(MAX_CHAIN_SIZE) + ".")
 				return
 			}
 			if sound != nil {
@@ -103,37 +115,17 @@ func onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 		close(sounds)
 
-		// Find the server
-		guild, _ := discord.State.Guild(channel.GuildID)
-		if guild == nil {
-			log.WithFields(log.Fields{
-				"guild":   channel.GuildID,
-				"channel": channel,
-				"message": m.ID,
-			}).Warning("Failed to grab guild")
-			return
-		}
-
-		// Grab the users voice channel
-		var channel *discordgo.Channel
-		for _, vs := range guild.VoiceStates {
-			if vs.UserID == m.Author.ID {
-				channel, _ = discord.State.Channel(vs.ChannelID)
-				break
-			}
-		}
-		if channel == nil {
-			log.WithFields(log.Fields{
-				"user":  m.Author.ID,
-				"guild": guild.ID,
-			}).Warning("Failed to find channel to play sound in")
+		// Get the voice channel the user is in
+		vc := userVoiceChannel(channel.GuildID, m.Author)
+		if vc == nil {
+			dm(m.Author, "Could not play the sound requested. Are you in a voice channel?")
 			return
 		}
 
 		// Queue
 		(&Play{
-			GuildID: guild.ID,
-			ChannelID: channel.ID,
+			GuildID: vc.GuildID,
+			ChannelID: vc.ID,
 			Sounds: sounds,
 		}).enqueue()
 	}

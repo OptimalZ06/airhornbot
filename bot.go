@@ -1,14 +1,12 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"io/ioutil"
 	"os"
 	"os/signal"
 	"regexp"
 	"strconv"
-	"strings"
 	"syscall"
 	"time"
 
@@ -17,9 +15,6 @@ import (
 )
 
 var (
-	// discordgo session
-	discord *discordgo.Session
-
 	// Collections
 	COLLECTIONS []*Collection
 
@@ -104,41 +99,6 @@ func main() {
 
 	// Close Discord session.
 	discord.Close()
-}
-
-// Execute a command
-func command(msg string, m *discordgo.MessageCreate) {
-	owner := m.Author.ID == OWNER
-	switch(msg) {
-	case "help":
-		help(m)
-	case "reload":
-		if owner {
-			load()
-		}
-	}
-}
-
-// Print out all the commands
-func help(m *discordgo.MessageCreate) {
-
-	// Create a buffer
-	var buffer bytes.Buffer
-
-	// Print out collections and sounds
-	buffer.WriteString("```md\n")
-	for _, coll := range COLLECTIONS {
-		command := PREFIX + coll.Name
-		buffer.WriteString(command + "\n" + strings.Repeat("=", len(command)) + "\n")
-		for _, s := range coll.Sounds {
-			buffer.WriteString(s.Name + "\n")
-		}
-		buffer.WriteString("\n")
-	}
-	buffer.WriteString("```")
-
-	// Send to channel
-	discord.ChannelMessageSend(m.ChannelID, buffer.String())
 }
 
 // Load collections and sounds from file
