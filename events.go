@@ -17,7 +17,7 @@ func addHandlers() {
 
 // This function will be called (due to AddHandler above) every time a new
 // guild is joined.
-func onGuildCreate(s *discordgo.Session, event *discordgo.GuildCreate) {
+func onGuildCreate(_ *discordgo.Session, event *discordgo.GuildCreate) {
 	log.Info("Guild create function has ran!")
 /*
 	if event.Guild.Unavailable {
@@ -26,23 +26,23 @@ func onGuildCreate(s *discordgo.Session, event *discordgo.GuildCreate) {
 
 	for _, channel := range event.Guild.Channels {
 		if channel.ID == event.Guild.ID {
-			_, _ = s.ChannelMessageSend(channel.ID, "Airhorn is ready! Type " + PREFIX + "airhorn while in a voice channel to play a sound.")
+			_, _ = discord.ChannelMessageSend(channel.ID, "Airhorn is ready! Type " + PREFIX + "airhorn while in a voice channel to play a sound.")
 			return
 		}
 	}
 	*/
 }
 
-func onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
+func onMessageCreate(_ *discordgo.Session, m *discordgo.MessageCreate) {
 
 	// Make message lower case
 	m.Content = strings.ToLower(m.Content)
 
 	// Ignore all messages created by us
-	if m.Author.ID == s.State.User.ID {
+	if m.Author.ID == discord.State.User.ID {
 
 	// Get the channel
-	} else if channel, _ := s.State.Channel(m.ChannelID); channel == nil {
+	} else if channel, _ := discord.State.Channel(m.ChannelID); channel == nil {
 		log.WithFields(log.Fields{
 			"channel": m.ChannelID,
 			"message": m.ID,
@@ -54,8 +54,8 @@ func onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	// We are being mentioned
 	} else if len(m.Mentions) > 0 {
-		if m.Mentions[0].ID == s.State.Ready.User.ID {
-			command(strings.Trim(strings.Replace(m.ContentWithMentionsReplaced(), "@" + s.State.Ready.User.Username, "", 1), " "), m)
+		if m.Mentions[0].ID == discord.State.User.ID {
+			command(strings.Trim(strings.Replace(m.ContentWithMentionsReplaced(), "@" + discord.State.User.Username, "", 1), " "), m)
 		}
 
 	// Find the collection for the command we got
@@ -115,6 +115,11 @@ func onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 		close(sounds)
 
+		// No sounds just ignore
+		if len(sounds) == 0 {
+			return
+		}
+
 		// Get the voice channel the user is in
 		vc := userVoiceChannel(channel.GuildID, m.Author)
 		if vc == nil {
@@ -131,7 +136,7 @@ func onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 }
 
-func onReady(s *discordgo.Session, event *discordgo.Ready) {
+func onReady(_ *discordgo.Session, event *discordgo.Ready) {
 	log.Info("Recieved READY payload")
-	s.UpdateStatus(0, "sounds")
+	discord.UpdateStatus(0, "sounds")
 }
