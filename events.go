@@ -61,10 +61,21 @@ func onMessageCreate(_ *discordgo.Session, m *discordgo.MessageCreate) {
 	// Find the collection for the command we got
 	} else if strings.HasPrefix(m.Content, PREFIX) {
 
-		// Split message by spaces after prefix
-		parts := strings.Split(m.Content[len(PREFIX):], " ")
+		//  Remove prefix and trim spaces then make sure not blank
+		content := strings.Trim(m.Content[len(PREFIX):], " ")
+		if content == "" {
+			return
+		}
 
-		// Loop through each part and build a channel of sounds
+		// Get the voice channel the user is in
+		vc := userVoiceChannel(channel.GuildID, m.Author)
+		if vc == nil {
+			dm(m.Author, "Please join a voice channel so I know where to play your requests.")
+			return
+		}
+
+		// Loop through each part of content and build a channel of sounds
+		parts := strings.Split(content, " ")
 		sounds := make(chan *Sound, MAX_CHAIN_SIZE)
 		for i, plen := 0, len(parts); i < plen; {
 			var (
@@ -104,8 +115,8 @@ func onMessageCreate(_ *discordgo.Session, m *discordgo.MessageCreate) {
 			// Add a sound
 			addSound:
 			if len(sounds) == MAX_CHAIN_SIZE {
-				dm(m.Author, "Too many sounds requested. Limit is " + strconv.Itoa(MAX_CHAIN_SIZE) + ".")
-				return
+				dm(m.Author, "Only some of the sounds requested will be played. Limit is " + strconv.Itoa(MAX_CHAIN_SIZE) + ".")
+				break
 			}
 			if sound != nil {
 				sounds <- sound
@@ -114,18 +125,6 @@ func onMessageCreate(_ *discordgo.Session, m *discordgo.MessageCreate) {
 			sounds <- coll.Sounds[randomRange(0, len(coll.Sounds))]
 		}
 		close(sounds)
-
-		// No sounds just ignore
-		if len(sounds) == 0 {
-			return
-		}
-
-		// Get the voice channel the user is in
-		vc := userVoiceChannel(channel.GuildID, m.Author)
-		if vc == nil {
-			dm(m.Author, "Could not play the sound requested. Are you in a voice channel?")
-			return
-		}
 
 		// Queue
 		(&Play{
