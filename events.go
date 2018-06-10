@@ -3,6 +3,7 @@ package main
 import (
 	"strconv"
 	"strings"
+	"fmt"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/bwmarrin/discordgo"
@@ -63,6 +64,7 @@ func onMessageCreate(_ *discordgo.Session, m *discordgo.MessageCreate) {
 
 		//  Remove prefix and trim spaces then make sure not blank
 		content := strings.Trim(m.Content[len(PREFIX):], " ")
+
 		if content == "" {
 			return
 		}
@@ -87,6 +89,18 @@ func onMessageCreate(_ *discordgo.Session, m *discordgo.MessageCreate) {
 			if parts[i] == "" {
 				i++
 				continue
+			}
+
+			// Replace random sound command
+			if parts[i] == "random" {
+				split := strings.Split(RANDOM[randomRange(0, len(RANDOM))], " ")
+				
+				parts = append(parts, "")
+				copy(parts[i+1:], parts[i:])
+
+				// Replace random with sounds
+				parts[i], parts[i+1] = split[0], split[1]
+				plen++
 			}
 
 			// Find a collection

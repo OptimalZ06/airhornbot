@@ -18,6 +18,9 @@ var (
 	// Collections
 	COLLECTIONS []*Collection
 
+	// Random sounds
+	RANDOM []string
+
 	// Commands prefix
 	PREFIX = "!"
 
@@ -105,8 +108,9 @@ func main() {
 func load() {
 	log.Info("Loading files and building collections")
 
-	// Reset the collections
+	// Reset the collections and random... is random needed here?
 	COLLECTIONS = []*Collection{}
+	RANDOM = []string{}
 
 	// Read all files from the audio directory
 	files, err := ioutil.ReadDir("audio")
@@ -115,7 +119,14 @@ func load() {
 	}
 
 	// Loop through each file and store into a collections map
-	var collection *Collection
+	// Also storing each file name for random selection command
+	// Create temp rand command and parent
+	var (
+		collection *Collection
+		parent string
+		rand string
+	)
+
 	for _, file := range files {
 
 		// Only match files according to the regex below
@@ -131,6 +142,7 @@ func load() {
 					Sounds: []*Sound{},
 				}
 				COLLECTIONS = append(COLLECTIONS, collection)
+				parent = m[1]
 			}
 
 			// Create and append the sound
@@ -138,6 +150,10 @@ func load() {
 				Name: m[2],
 				buffer: make([][]byte, 0),
 			})
+
+			// Append sound name to RANDOM
+			rand = parent + " " + m[2]
+			RANDOM = append(RANDOM, rand)
 		}
 	}
 
