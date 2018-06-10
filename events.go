@@ -3,7 +3,6 @@ package main
 import (
 	"strconv"
 	"strings"
-	"fmt"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/bwmarrin/discordgo"
@@ -94,7 +93,7 @@ func onMessageCreate(_ *discordgo.Session, m *discordgo.MessageCreate) {
 			// Replace random sound command
 			if parts[i] == "random" {
 				split := strings.Split(RANDOM[randomRange(0, len(RANDOM))], " ")
-				
+
 				parts = append(parts, "")
 				copy(parts[i+1:], parts[i:])
 
