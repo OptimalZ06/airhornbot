@@ -38,44 +38,43 @@ func (p *Play) enqueue() {
 
 // Play a sound
 func (p *Play) play(vc *discordgo.VoiceConnection) {
-	log.WithFields(log.Fields{
-		"play": p,
-	}).Info("Playing sound")
+	var err error
 
 	// Create channel
 	if vc == nil {
 		time.Sleep(DELAY_JOIN_CHANNEL)
-		var err error
 		vc, err = discord.ChannelVoiceJoin(p.GuildID, p.ChannelID, false, false)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"error": err,
-			}).Error("Failed to play sound")
-			vc = nil
-		}
 
 	// Change channel
 	} else if vc.ChannelID != p.ChannelID {
 		time.Sleep(DELAY_CHANGE_CHANNEL)
-		vc.ChangeChannel(p.ChannelID, false, false)
+		err = vc.ChangeChannel(p.ChannelID, false, false)
 	}
 
-	// If we have a connection
-	if vc != nil {
+	// Error
+	if err != nil {
+		log.WithFields(log.Fields{
+			"play": p,
+			"error": err,
+		}).Error("Failed to play sound")
 
-		// Play the sound
+	// Play the sound
+	} else {
 		time.Sleep(DELAY_BEFORE_SOUND)
 		for sound := range p.Sounds {
+			log.WithFields(log.Fields{
+				"sound": sound,
+			}).Info("Playing sound")
 			time.Sleep(DELAY_BEFORE_SOUND_CHAIN)
 			sound.Play(vc)
 		}
+	}
 
-		// Disconnect if queue is empty
-		if len(queues[p.GuildID]) == 0 {
-			time.Sleep(DELAY_BEFORE_DISCONNECT)
-			vc.Disconnect()
-			vc = nil
-		}
+	// Disconnect if error or queue is empty
+	if err != nil || len(queues[p.GuildID]) == 0 {
+		time.Sleep(DELAY_BEFORE_DISCONNECT)
+		vc.Disconnect()
+		vc = nil
 	}
 
 	// Lock
