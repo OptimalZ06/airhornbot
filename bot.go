@@ -2,10 +2,8 @@ package main
 
 import (
 	"flag"
-	"io/ioutil"
 	"os"
 	"os/signal"
-	"regexp"
 	"strconv"
 	"syscall"
 	"time"
@@ -102,64 +100,4 @@ func main() {
 
 	// Close Discord session.
 	discord.Close()
-}
-
-// Load collections and sounds from file
-func load() {
-	log.Info("Loading files and building collections")
-
-	// Reset the collections and random... is random needed here?
-	COLLECTIONS = []*Collection{}
-	RANDOM = []string{}
-
-	// Read all files from the audio directory
-	files, err := ioutil.ReadDir("audio")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Loop through each file and store into a collections map
-	// Also storing each file name for random selection command
-	// Create temp rand command and parent
-	var (
-		collection *Collection
-		parent string
-		rand string
-	)
-
-	for _, file := range files {
-
-		// Only match files according to the regex below
-		r := regexp.MustCompile("^([a-z]+)_([a-z]+)\\.dca$")
-
-		// Match found
-		if m := r.FindStringSubmatch(file.Name()); m != nil {
-
-			// Create and append the collection
-			if collection == nil || collection.Name != m[1] {
-				collection = &Collection{
-					Name: m[1],
-					Sounds: []*Sound{},
-				}
-				COLLECTIONS = append(COLLECTIONS, collection)
-				parent = m[1]
-			}
-
-			// Create and append the sound
-			collection.Sounds = append(collection.Sounds, &Sound{
-				Name: m[2],
-				buffer: make([][]byte, 0),
-			})
-
-			// Append sound name to RANDOM
-			rand = parent + " " + m[2]
-			RANDOM = append(RANDOM, rand)
-		}
-	}
-
-	// Preload all the sounds
-	log.Info("Preloading sounds...")
-	for _, coll := range COLLECTIONS {
-		coll.Load()
-	}
 }

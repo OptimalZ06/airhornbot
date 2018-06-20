@@ -7,22 +7,36 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+var commands = map[string]func(m *discordgo.MessageCreate, owner bool) {
+	"attach": commandAttach,
+	"help": commandHelp,
+	"reload": commandReload,
+}
 
 // Execute a command
 func command(msg string, m *discordgo.MessageCreate) {
-	owner := m.Author.ID == OWNER
-	switch(msg) {
-	case "help":
-		help(m)
-	case "reload":
-		if owner {
-			reload()
+	if len(m.Attachments) > 0 {
+		msg = "attach"
+	}
+	if f, ok := commands[msg]; ok {
+		f(m, m.Author.ID == OWNER)
+	}
+}
+
+// Special command to handle attachments
+func commandAttach(m *discordgo.MessageCreate, owner bool) {
+	if owner {
+		for _, a := range m.Attachments {
+			err := importFromURL(a.URL)
+			if err != nil {
+				dm(m.Author, err.Error())
+			}
 		}
 	}
 }
 
 // Print out all the commands
-func help(m *discordgo.MessageCreate) {
+func commandHelp(m *discordgo.MessageCreate, _ bool) {
 
 	// Create a buffer
 	var buffer bytes.Buffer
@@ -44,6 +58,8 @@ func help(m *discordgo.MessageCreate) {
 }
 
 // Reload
-func reload() {
-	load()
+func commandReload(m *discordgo.MessageCreate, owner bool) {
+	if owner {
+		load()
+	}
 }

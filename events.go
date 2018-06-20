@@ -15,8 +15,7 @@ func addHandlers() {
 	discord.AddHandler(onGuildCreate)
 }
 
-// This function will be called (due to AddHandler above) every time a new
-// guild is joined.
+// This function will be called every time a new guild is joined.
 func onGuildCreate(_ *discordgo.Session, event *discordgo.GuildCreate) {
 	log.Info("Guild create function has ran!")
 /*

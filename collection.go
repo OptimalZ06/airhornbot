@@ -14,10 +14,3 @@ func (c *Collection) Find(name string) *Sound {
 	}
 	return nil
 }
-
-// Load all the sounds data in the collection
-func (c *Collection) Load() {
-	for _, sound := range c.Sounds {
-		sound.Load(c)
-	}
-}
