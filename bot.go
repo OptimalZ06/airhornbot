@@ -92,7 +92,7 @@ func main() {
 	}
 
 	// We're running!
-	log.Info("AIRHORNBOT is ready to horn it up.")
+	log.Info("DATTA.rocks is ready to horn it up.")
 
 	// Wait for a signal to quit
 	sc := make(chan os.Signal, 1)
