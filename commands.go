@@ -10,6 +10,7 @@ import (
 var commands = map[string]func(m *discordgo.MessageCreate, owner bool) {
 	"attach": commandAttach,
 	"help": commandHelp,
+	"about": commandAbout,
 	"reload": commandReload,
 }
 
@@ -51,6 +52,20 @@ func commandHelp(m *discordgo.MessageCreate, _ bool) {
 		}
 		buffer.WriteString("\n")
 	}
+	buffer.WriteString("```")
+
+	// Send to channel
+	discord.ChannelMessageSend(m.ChannelID, buffer.String())
+}
+
+// Print out all the commands
+func commandAbout(m *discordgo.MessageCreate, _ bool) {
+	// Create a buffer
+	var buffer bytes.Buffer
+
+	// Print out collections and sounds
+	buffer.WriteString("```md\n")
+	buffer.WriteString("I'm the DATTA.rocks Bot and I live on GCP, powered by nolag.io. Type !help to see a list of commands.\n")
 	buffer.WriteString("```")
 
 	// Send to channel
