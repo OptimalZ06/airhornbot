@@ -36,5 +36,15 @@ OWNER_ID = Client ID found inside the "OAuth2" tab
 /.$GOPATH/bin/airhornbot -t "MY_BOT_ACCOUNT_TOKEN" -o OWNER_ID
 ```
 
+#### Start 'er up (in screen):
+Install screen
+```
+sudo apt-get install screen
+```
+Run the bot inside of screen
+```
+screen -d -m /.$GOPATH/bin/airhornbot -t "MY_BOT_ACCOUNT_TOKEN" -o OWNER_ID
+```
+
 ## Thanks to the original devs
 Thanks to the awesome (one might describe them as smart... loyal... appreciative...) [iopred](https://github.com/iopred) and [bwmarrin](https://github.com/bwmarrin/discordgo) for helping code review the initial release.
